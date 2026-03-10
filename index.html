@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#C4943A">
+<meta name="theme-color" content="#1a2a6e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Biblioteca">
@@ -14,9 +14,9 @@
 <style>
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   :root{
-    --bg:#1a1510;--bg2:#1e1912;--bg3:rgba(255,255,255,0.04);
-    --gold:#C4943A;--gold2:rgba(196,148,58,0.18);--gold3:rgba(196,148,58,0.08);
-    --text:#e8dcc8;--muted:#7a6a55;--sub:#b8a890;
+    --bg:#0e1428;--bg2:#111830;--bg3:rgba(255,255,255,0.04);
+    --gold:#4A7ACC;--gold2:rgba(74,122,204,0.18);--gold3:rgba(74,122,204,0.08);
+    --text:#e8dcc8;--muted:#5a6a8a;--sub:#a0b4d0;
     --red:#8B4A4A;--green:#6B8E6B;--blue:#4A7A9B;
     --safe-top:env(safe-area-inset-top,0px);
     --safe-bot:env(safe-area-inset-bottom,0px);
@@ -27,7 +27,7 @@
   /* INSTALL BANNER */
   #install-banner{
     display:none;position:fixed;top:0;left:0;right:0;z-index:200;
-    background:linear-gradient(135deg,#2a1f0e,#1a1510);
+    background:linear-gradient(135deg,#2a1f0e,#0e1428);
     border-bottom:2px solid var(--gold);
     padding:12px 16px 12px calc(16px + var(--safe-top));
     padding-top:calc(12px + var(--safe-top));
@@ -63,7 +63,7 @@
     flex-shrink:0;
     padding:calc(12px + var(--safe-top)) 16px 0;
     background:rgba(18,14,9,0.98);
-    border-bottom:1px solid rgba(196,148,58,0.2);
+    border-bottom:1px solid rgba(74,122,204,0.2);
     backdrop-filter:blur(12px);
     position:sticky;top:0;z-index:50;
   }
@@ -75,7 +75,7 @@
   .add-btn{padding:8px 16px;background:var(--gold);color:var(--bg);border:none;border-radius:6px;font-family:inherit;font-weight:bold;font-size:13px;cursor:pointer;white-space:nowrap}
 
   /* TABS */
-  .tabs{display:flex;gap:0;overflow-x:auto;scrollbar-width:none;border-top:1px solid rgba(196,148,58,0.12)}
+  .tabs{display:flex;gap:0;overflow-x:auto;scrollbar-width:none;border-top:1px solid rgba(74,122,204,0.12)}
   .tabs::-webkit-scrollbar{display:none}
   .tab{flex:1;min-width:60px;padding:10px 8px;text-align:center;font-size:11px;color:var(--muted);border:none;background:none;cursor:pointer;font-family:inherit;border-bottom:2px solid transparent;transition:all 0.2s;white-space:nowrap}
   .tab.active{color:var(--gold);border-bottom-color:var(--gold)}
@@ -85,14 +85,14 @@
 
   /* FILTERS */
   .filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
-  .filter-input{flex:1;min-width:150px;background:rgba(255,255,255,0.06);border:1px solid rgba(196,148,58,0.22);color:var(--text);padding:9px 12px;border-radius:6px;font-family:inherit;font-size:13px;outline:none}
+  .filter-input{flex:1;min-width:150px;background:rgba(255,255,255,0.06);border:1px solid rgba(74,122,204,0.22);color:var(--text);padding:9px 12px;border-radius:6px;font-family:inherit;font-size:13px;outline:none}
   .filter-input::placeholder{color:var(--muted)}
-  .filter-select{background:rgba(255,255,255,0.06);border:1px solid rgba(196,148,58,0.22);color:var(--text);padding:9px 10px;border-radius:6px;font-family:inherit;font-size:12px;outline:none;cursor:pointer}
+  .filter-select{background:rgba(255,255,255,0.06);border:1px solid rgba(74,122,204,0.22);color:var(--text);padding:9px 10px;border-radius:6px;font-family:inherit;font-size:12px;outline:none;cursor:pointer}
 
   /* SHELF GRID */
   .shelf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px}
-  .book-card{background:var(--bg3);border:1px solid rgba(196,148,58,0.14);border-radius:8px;overflow:hidden;cursor:pointer;transition:all 0.2s;position:relative}
-  .book-card.expanded{border-color:var(--gold);box-shadow:0 6px 24px rgba(196,148,58,0.15);transform:translateY(-2px)}
+  .book-card{background:var(--bg3);border:1px solid rgba(74,122,204,0.14);border-radius:8px;overflow:hidden;cursor:pointer;transition:all 0.2s;position:relative}
+  .book-card.expanded{border-color:var(--gold);box-shadow:0 6px 24px rgba(74,122,204,0.15);transform:translateY(-2px)}
   .card-stripe{height:4px}
   .card-cover{width:100%;aspect-ratio:3/4;object-fit:cover;display:block}
   .card-cover-placeholder{width:100%;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;padding:10px;font-size:11px;color:rgba(255,255,255,0.6);font-style:italic;text-align:center;line-height:1.4}
@@ -101,14 +101,14 @@
   .card-author{font-size:10px;color:var(--muted);margin-bottom:6px}
   .card-tag{display:inline-block;font-size:9px;padding:2px 7px;border-radius:20px}
   .loan-badge{position:absolute;top:8px;right:6px;background:var(--red);color:#fff;font-size:8px;padding:2px 5px;border-radius:3px;font-weight:bold;letter-spacing:0.04em}
-  .card-expanded{border-top:1px solid rgba(196,148,58,0.15);padding:10px;margin-top:6px}
+  .card-expanded{border-top:1px solid rgba(74,122,204,0.15);padding:10px;margin-top:6px}
   .loan-info{background:rgba(139,74,74,0.12);border-radius:4px;padding:7px 8px;font-size:10px;color:#c47a7a;line-height:1.6;margin-bottom:8px}
   .card-notes{font-size:10px;color:var(--sub);font-style:italic;line-height:1.5;margin-bottom:8px}
   .card-meta{font-size:10px;color:var(--muted);margin-bottom:8px}
   .card-actions{display:flex;gap:5px;flex-wrap:wrap}
 
   /* LIST VIEW */
-  .list-item{background:var(--bg3);border:1px solid rgba(196,148,58,0.12);border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:8px;border-left-width:4px}
+  .list-item{background:var(--bg3);border:1px solid rgba(74,122,204,0.12);border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:8px;border-left-width:4px}
   .list-cover{width:42px;height:56px;border-radius:3px;object-fit:cover;flex-shrink:0;box-shadow:1px 2px 8px rgba(0,0,0,0.4)}
   .list-cover-ph{width:42px;height:56px;border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:8px;color:rgba(255,255,255,0.5);text-align:center;padding:4px}
   .list-info{flex:1;min-width:0}
@@ -120,7 +120,7 @@
   /* LOANS VIEW */
   .loans-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px}
   .section-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px;margin-top:20px}
-  .loan-card{background:var(--bg3);border:1px solid rgba(196,148,58,0.16);border-radius:8px;padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:center}
+  .loan-card{background:var(--bg3);border:1px solid rgba(74,122,204,0.16);border-radius:8px;padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:center}
   .loan-card.overdue{border-color:rgba(196,100,100,0.3)}
   .loan-card-info{flex:1;min-width:0}
   .loan-book-title{font-size:14px;font-weight:bold;color:var(--text)}
@@ -129,11 +129,11 @@
   .loan-note{font-size:11px;color:var(--muted);font-style:italic;margin-top:2px}
   .loan-actions{display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0}
   .overdue-tag{font-size:9px;padding:3px 7px;border-radius:3px;background:rgba(196,100,100,0.15);color:#c47a7a;border:1px solid rgba(196,100,100,0.25);font-weight:bold;white-space:nowrap}
-  .returned-card{background:rgba(255,255,255,0.02);border:1px solid rgba(196,148,58,0.07);border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;gap:12px;align-items:center;opacity:0.65}
+  .returned-card{background:rgba(255,255,255,0.02);border:1px solid rgba(74,122,204,0.07);border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;gap:12px;align-items:center;opacity:0.65}
 
   /* STATS */
   .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
-  .stat-card{background:var(--bg3);border:1px solid rgba(196,148,58,0.15);border-radius:8px;padding:16px 12px}
+  .stat-card{background:var(--bg3);border:1px solid rgba(74,122,204,0.15);border-radius:8px;padding:16px 12px}
   .stat-icon{font-size:20px;margin-bottom:6px}
   .stat-value{font-size:24px;font-weight:bold;color:var(--gold)}
   .stat-label{font-size:10px;color:var(--muted);margin-top:3px}
@@ -142,33 +142,33 @@
 
   /* BUTTONS */
   .btn{padding:7px 13px;border-radius:5px;border:none;cursor:pointer;font-family:inherit;font-size:12px;transition:all 0.15s;white-space:nowrap}
-  .btn-gold{background:rgba(196,148,58,0.2);color:var(--gold);border:1px solid rgba(196,148,58,0.3)}
+  .btn-gold{background:rgba(74,122,204,0.2);color:var(--gold);border:1px solid rgba(74,122,204,0.3)}
   .btn-green{background:rgba(107,142,107,0.2);color:var(--green);border:1px solid rgba(107,142,107,0.3)}
   .btn-blue{background:rgba(74,122,155,0.2);color:var(--blue);border:1px solid rgba(74,122,155,0.3)}
   .btn-red{background:rgba(139,74,74,0.2);color:#c47a7a;border:1px solid rgba(139,74,74,0.3)}
-  .btn-solid-gold{background:var(--gold);color:var(--bg);font-weight:bold}
+  .btn-solid-gold{background:#4A7ACC;color:var(--bg);font-weight:bold}
   .btn-solid-green{background:var(--green);color:#fff;font-weight:bold}
 
   /* MODAL */
   .modal-overlay{display:none;position:fixed;inset:0;z-index:150;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center}
   .modal-overlay.open{display:flex}
-  .modal{background:var(--bg2);border:1px solid rgba(196,148,58,0.28);border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;padding:20px 16px calc(20px + var(--safe-bot));animation:slideUp 0.3s ease}
+  .modal{background:var(--bg2);border:1px solid rgba(74,122,204,0.28);border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;padding:20px 16px calc(20px + var(--safe-bot));animation:slideUp 0.3s ease}
   @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
   .modal-handle{width:40px;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 auto 16px}
   .modal-title{font-size:17px;font-weight:bold;color:var(--gold);margin-bottom:18px}
   .form-group{margin-bottom:14px}
   .form-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px}
-  .form-input{width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(196,148,58,0.22);color:var(--text);padding:10px 12px;border-radius:6px;font-family:inherit;font-size:13px;outline:none}
-  .form-input:focus{border-color:rgba(196,148,58,0.5)}
+  .form-input{width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(74,122,204,0.22);color:var(--text);padding:10px 12px;border-radius:6px;font-family:inherit;font-size:13px;outline:none}
+  .form-input:focus{border-color:rgba(74,122,204,0.5)}
   .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
   textarea.form-input{resize:vertical;min-height:70px}
 
   /* COVER UPLOAD */
   .cover-upload-area{display:flex;align-items:center;gap:14px}
-  .cover-preview{width:64px;height:85px;border-radius:4px;overflow:hidden;border:1px solid rgba(196,148,58,0.3);cursor:pointer;flex-shrink:0}
+  .cover-preview{width:64px;height:85px;border-radius:4px;overflow:hidden;border:1px solid rgba(74,122,204,0.3);cursor:pointer;flex-shrink:0}
   .cover-preview img{width:100%;height:100%;object-fit:cover}
-  .cover-placeholder{width:100%;height:100%;background:rgba(196,148,58,0.08);display:flex;align-items:center;justify-content:center;font-size:24px}
+  .cover-placeholder{width:100%;height:100%;background:rgba(74,122,204,0.08);display:flex;align-items:center;justify-content:center;font-size:24px}
   .cover-btns{display:flex;flex-direction:column;gap:6px}
 
   /* AI SCAN */
@@ -192,15 +192,75 @@
   /* SCROLLBAR */
   #main::-webkit-scrollbar{width:4px}
   #main::-webkit-scrollbar-track{background:transparent}
-  #main::-webkit-scrollbar-thumb{background:rgba(196,148,58,0.2);border-radius:2px}
+  #main::-webkit-scrollbar-thumb{background:rgba(74,122,204,0.2);border-radius:2px}
 
   @media(max-width:400px){
     .shelf-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
     .stats-grid{grid-template-columns:repeat(2,1fr)}
   }
+
+  /* ALERT PANEL */
+  #alert-panel{
+    display:none;position:fixed;inset:0;z-index:180;
+    background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);
+    align-items:flex-end;justify-content:center;
+  }
+  #alert-panel.open{display:flex}
+  .alert-sheet{
+    background:#0d1326;border:1px solid rgba(74,122,204,0.3);
+    border-radius:16px 16px 0 0;width:100%;max-width:560px;
+    max-height:85vh;overflow-y:auto;
+    padding:20px 16px calc(20px + var(--safe-bot));
+    animation:slideUp 0.3s ease;
+  }
+  .alert-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+  .alert-title{font-size:17px;font-weight:bold;color:#e05555}
+  .alert-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:4px 8px}
+  .alert-item{
+    background:rgba(255,255,255,0.04);border-radius:8px;padding:14px;margin-bottom:10px;
+    border-left:4px solid #e05555;
+  }
+  .alert-item.warning{border-left-color:#d48c2a}
+  .alert-item.info{border-left-color:#4A7ACC}
+  .alert-item-title{font-size:13px;font-weight:bold;color:var(--text);margin-bottom:4px}
+  .alert-item-sub{font-size:12px;color:var(--sub);line-height:1.6}
+  .alert-item-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .alert-badge{
+    position:absolute;top:-4px;right:-4px;
+    background:#e05555;color:#fff;
+    font-size:10px;font-weight:bold;
+    width:18px;height:18px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    border:2px solid #0d1326;
+  }
+  .notif-btn-wrap{position:relative;display:inline-block}
+
+  /* NOTIFICATION TOAST */
+  #toast{
+    position:fixed;top:calc(16px + var(--safe-top));left:50%;transform:translateX(-50%) translateY(-120px);
+    z-index:250;background:#1a2a5a;border:1px solid rgba(74,122,204,0.4);
+    border-radius:10px;padding:12px 18px;font-size:13px;color:var(--text);
+    white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,0.5);
+    transition:transform 0.35s ease;pointer-events:none;
+  }
+  #toast.show{transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
+
+<!-- TOAST -->
+<div id="toast">📋 Mensagem copiada!</div>
+
+<!-- ALERT PANEL -->
+<div id="alert-panel">
+  <div class="alert-sheet">
+    <div class="alert-header">
+      <div class="alert-title">🔔 Alertas de Empréstimo</div>
+      <button class="alert-close" onclick="closeAlertPanel()">✕</button>
+    </div>
+    <div id="alert-list"></div>
+  </div>
+</div>
 
 <!-- INSTALL BANNER (Android/Desktop) -->
 <div id="install-banner">
@@ -235,7 +295,13 @@
         <div class="brand-sub" id="header-sub">Carregando...</div>
       </div>
     </div>
-    <button class="add-btn" onclick="openBookModal()">+ Livro</button>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div class="notif-btn-wrap">
+        <button id="notif-btn" onclick="openAlertPanel()" style="background:rgba(74,122,204,0.12);border:1px solid rgba(74,122,204,0.25);color:var(--gold);width:38px;height:38px;border-radius:8px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">🔔</button>
+        <div class="alert-badge" id="alert-badge" style="display:none">0</div>
+      </div>
+      <button class="add-btn" onclick="openBookModal()">+ Livro</button>
+    </div>
   </div>
   <div class="tabs">
     <button class="tab active" data-tab="shelf" onclick="switchTab('shelf')">🗂 Estante</button>
@@ -388,8 +454,8 @@
 // DATA
 // ═══════════════════════════════════════════
 const GENRES = ['Teologia','Romance','Ficção Científica','Fantasia','Terror','Mistério','Biografia','História','Autoajuda','Técnico','Poesia','Outro'];
-const STATUS_COLORS = {'Quero Ler':'#6B8E6B','Lendo':'#C4943A','Lido':'#4A7A9B','Pausado':'#8B7355'};
-const BOOK_COLORS = ['#4A3728','#28433A','#283C4A','#432840','#433828','#2A3A28','#3A2828','#28283A'];
+const STATUS_COLORS = {'Quero Ler':'#6B8E6B','Lendo':'#4A7ACC','Lido':'#4A7A9B','Pausado':'#8B7355'};
+const BOOK_COLORS = ['#0e2050','#0a1a4a','#152560','#1a2e70','#0d1c55','#162248','#1e2d6a','#0b1840'];
 
 let books = JSON.parse(localStorage.getItem('books') || 'null') || [
   {id:1,title:'Propósito de Vida',author:'Rick Warren',genre:'Teologia',status:'Lido',rating:5,notes:'Leitura transformadora.',year:2002,shelf:'Estante A',dateAdded:'2024-01-10',cover:null},
@@ -426,7 +492,7 @@ function coverHTML(book, w, h) {
 }
 
 function starsHTML(r, sm=false) {
-  return [1,2,3,4,5].map(i=>`<span style="font-size:${sm?'12px':'14px'};color:${i<=r?'#C4943A':'#3a3228'}">★</span>`).join('');
+  return [1,2,3,4,5].map(i=>`<span style="font-size:${sm?'12px':'14px'};color:${i<=r?'#4A7ACC':'#3a3228'}">★</span>`).join('');
 }
 
 function tagHTML(text, color) {
@@ -518,7 +584,7 @@ function shelfCard(book) {
   const loaned = isLoaned(book.id);
   const loan = activeLoan(book.id);
   const exp = expandedBook === book.id;
-  const statusColor = loaned ? '#8B4A4A' : (STATUS_COLORS[book.status]||'#7a6a55');
+  const statusColor = loaned ? '#8B4A4A' : (STATUS_COLORS[book.status]||'#5a6a8a');
   let expHTML = '';
   if (exp) {
     expHTML = `<div class="card-expanded">
@@ -562,7 +628,7 @@ function renderList() {
   el.innerHTML = filtersHTML() + fb.map(book => {
     const loaned = isLoaned(book.id);
     const loan = activeLoan(book.id);
-    const sc = loaned ? '#8B4A4A' : (STATUS_COLORS[book.status]||'#7a6a55');
+    const sc = loaned ? '#8B4A4A' : (STATUS_COLORS[book.status]||'#5a6a8a');
     return `<div class="list-item" style="border-left-color:${sc}">
       ${coverHTML(book,42,56)}
       <div class="list-info">
@@ -658,7 +724,7 @@ function renderStats() {
       `<div class="stat-card"><div class="stat-icon">${i}</div><div class="stat-value">${v}</div><div class="stat-label">${l}</div></div>`
     ).join('')}
   </div>
-  <div style="background:var(--bg3);border:1px solid rgba(196,148,58,0.15);border-radius:8px;padding:18px;margin-bottom:12px">
+  <div style="background:var(--bg3);border:1px solid rgba(74,122,204,0.15);border-radius:8px;padding:18px;margin-bottom:12px">
     <div style="font-weight:bold;color:var(--gold);margin-bottom:14px">Status de Leitura</div>
     ${statusOpts.map(s => {
       const cnt = books.filter(b=>b.status===s).length;
@@ -671,11 +737,11 @@ function renderStats() {
       </div>`;
     }).join('')}
   </div>
-  <div style="background:var(--bg3);border:1px solid rgba(196,148,58,0.15);border-radius:8px;padding:18px">
+  <div style="background:var(--bg3);border:1px solid rgba(74,122,204,0.15);border-radius:8px;padding:18px">
     <div style="font-weight:bold;color:var(--gold);margin-bottom:12px">Por Gênero</div>
     <div style="display:flex;flex-wrap:wrap;gap:8px">
       ${Object.entries(genreCounts).sort((a,b)=>b[1]-a[1]).map(([g,c])=>
-        `<div style="padding:5px 12px;border-radius:20px;font-size:12px;background:var(--gold2);border:1px solid rgba(196,148,58,0.2);color:var(--gold)">${g} <strong>(${c})</strong></div>`
+        `<div style="padding:5px 12px;border-radius:20px;font-size:12px;background:var(--gold2);border:1px solid rgba(74,122,204,0.2);color:var(--gold)">${g} <strong>(${c})</strong></div>`
       ).join('')}
     </div>
   </div>`;
@@ -947,8 +1013,146 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(console.warn);
 }
 
+// ═══════════════════════════════════════════
+// ALERT & NOTIFICATION SYSTEM
+// ═══════════════════════════════════════════
+
+function getAlerts() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const alerts = [];
+
+  loans.filter(l => !l.returned).forEach(loan => {
+    const book = bookById(loan.bookId);
+    const name = book?.title || 'Livro desconhecido';
+    const borrower = loan.borrower;
+    const phone = loan.phone || '';
+
+    if (loan.expectedReturn) {
+      const dueDate = new Date(loan.expectedReturn + 'T00:00:00');
+      const diffDays = Math.round((dueDate - today) / (1000*60*60*24));
+      if (diffDays < 0) {
+        const daysLate = Math.abs(diffDays);
+        alerts.push({
+          type: 'overdue', severity: 'error', loan, book,
+          title: `⚠️ Atrasado há ${daysLate} dia${daysLate>1?'s':''}`,
+          sub: `"${name}" emprestado para <strong>${borrower}</strong> venceu em ${fmtDate(loan.expectedReturn)}.`,
+          phone,
+          msg: `Olá ${borrower}! 😊 Tudo bem? Passando para lembrar que o livro *"${name}"* que você pegou emprestado já passou do prazo de devolução (${fmtDate(loan.expectedReturn)}). Quando puder me devolver? Muito obrigado! 🙏`,
+        });
+      }
+    } else {
+      // No due date — alert after 15 days
+      const loanDate = new Date(loan.loanDate + 'T00:00:00');
+      const daysSince = Math.round((today - loanDate) / (1000*60*60*24));
+      if (daysSince >= 15) {
+        alerts.push({
+          type: 'nodate', severity: 'info', loan, book,
+          title: `📖 Emprestado há ${daysSince} dias sem prazo`,
+          sub: `"${name}" está com <strong>${borrower}</strong> desde ${fmtDate(loan.loanDate)} sem prazo definido.`,
+          phone,
+          msg: `Olá ${borrower}! 😊 Tudo bem? O livro *"${name}"* está com você há ${daysSince} dias. Quando puder devolver, fico aguardando! Obrigado! 🙏`,
+        });
+      }
+    }
+  });
+
+  // Sort: overdue first, then today, then soon, then no-date
+  const order = {overdue:0, today:1, soon:2, nodate:3};
+  return alerts.sort((a,b) => order[a.type] - order[b.type]);
+}
+
+function updateAlertBadge() {
+  const alerts = getAlerts();
+  const badge = document.getElementById('alert-badge');
+  const btn = document.getElementById('notif-btn');
+  if (alerts.length > 0) {
+    badge.textContent = alerts.length > 9 ? '9+' : alerts.length;
+    badge.style.display = 'flex';
+    // Pulse animation for urgent alerts
+    const hasUrgent = alerts.some(a => a.severity === 'error');
+    btn.style.animation = hasUrgent ? 'pulse 2s infinite' : 'none';
+  } else {
+    badge.style.display = 'none';
+    btn.style.animation = 'none';
+  }
+}
+
+function openAlertPanel() {
+  const alerts = getAlerts();
+  const list = document.getElementById('alert-list');
+
+  if (!alerts.length) {
+    list.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--muted)">
+      <div style="font-size:44px;margin-bottom:12px">✅</div>
+      <div style="font-size:14px">Nenhum alerta no momento!</div>
+      <div style="font-size:12px;margin-top:6px">Todos os empréstimos estão em dia.</div>
+    </div>`;
+  } else {
+    list.innerHTML = alerts.map((a, i) => {
+      const borderColor = a.severity==='error'?'#e05555':a.severity==='warning'?'#d48c2a':'#4A7ACC';
+      const hasPhone = a.phone && a.phone.trim();
+      const waPhone = a.phone ? a.phone.replace(/\D/g,'') : '';
+      const waLink = hasPhone ? `https://wa.me/55${waPhone}?text=${encodeURIComponent(a.msg)}` : '';
+      return `<div class="alert-item ${a.severity==='warning'?'warning':a.severity==='info'?'info':''}" style="border-left-color:${borderColor}">
+        <div class="alert-item-title">${a.title}</div>
+        <div class="alert-item-sub">${a.sub}${a.phone?`<br>📞 ${a.phone}`:''}</div>
+        <div class="alert-item-actions">
+          <button class="btn btn-gold" onclick="copyMsg(${i})" style="font-size:11px">📋 Copiar mensagem</button>
+          ${hasPhone ? `<a href="${waLink}" target="_blank" style="text-decoration:none"><button class="btn btn-green" style="font-size:11px">💬 WhatsApp</button></a>` : ''}
+          <button class="btn" style="font-size:11px;background:rgba(139,74,74,0.2);color:#c47a7a;border:1px solid rgba(139,74,74,0.3)" onclick="markReturned(${a.loan.id});closeAlertPanel()">✅ Devolvido</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Store alerts for copy function
+  window._currentAlerts = alerts;
+  document.getElementById('alert-panel').classList.add('open');
+}
+
+function closeAlertPanel() {
+  document.getElementById('alert-panel').classList.remove('open');
+}
+
+function copyMsg(idx) {
+  const msg = window._currentAlerts?.[idx]?.msg || '';
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(msg).then(() => showToast('📋 Mensagem copiada!'));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = msg; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('📋 Mensagem copiada!');
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// Schedule daily check
+function scheduleDailyCheck() {
+  setTimeout(() => { updateAlertBadge(); }, 1500);
+  setInterval(() => { updateAlertBadge(); }, 60 * 60 * 1000);
+}
+
+// Close alert panel on overlay click
+document.getElementById('alert-panel').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeAlertPanel();
+});
+
+// Add pulse keyframe dynamically
+const style = document.createElement('style');
+style.textContent = `@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(224,85,85,0.4)}50%{box-shadow:0 0 0 6px rgba(224,85,85,0)}}`;
+document.head.appendChild(style);
+
 // INIT
 render();
+scheduleDailyCheck();
 </script>
 </body>
 </html>

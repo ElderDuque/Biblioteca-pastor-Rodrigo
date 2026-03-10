@@ -4,8 +4,8 @@
   "description": "Organize e controle sua biblioteca e empréstimos de livros",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#1a1510",
-  "theme_color": "#C4943A",
+  "background_color": "#0e1428",
+  "theme_color": "#1a2a6e",
   "orientation": "portrait-primary",
   "icons": [
     {
