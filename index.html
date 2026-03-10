@@ -483,10 +483,121 @@ let dbReady = false;
 // Show loading state
 document.getElementById('header-sub').textContent = 'Conectando...';
 
+// ═══════════════════════════════════════════
+// MIGRATION: localStorage → Firebase
+// ═══════════════════════════════════════════
+async function migrateLocalData() {
+  const migratedKey = 'firebase_migrated_v1';
+  if (localStorage.getItem(migratedKey)) return; // already done
+
+  const localBooks = JSON.parse(localStorage.getItem('books') || 'null');
+  const localLoans = JSON.parse(localStorage.getItem('loans') || 'null');
+
+  // Only migrate if there's real local data
+  const hasBooks = localBooks && localBooks.length > 0;
+  const hasLoans = localLoans && localLoans.length > 0;
+  if (!hasBooks && !hasLoans) {
+    localStorage.setItem(migratedKey, '1');
+    return;
+  }
+
+  // Show migration banner
+  const banner = document.createElement('div');
+  banner.id = 'migration-banner';
+  banner.innerHTML = `
+    <div style="position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px">
+      <div style="background:#111830;border:1px solid rgba(74,122,204,0.4);border-radius:16px;padding:28px;max-width:360px;width:100%;text-align:center">
+        <div style="font-size:40px;margin-bottom:12px">☁️</div>
+        <div style="font-size:17px;font-weight:bold;color:#4A7ACC;margin-bottom:8px">Migrando seus dados</div>
+        <div style="font-size:13px;color:#a0b4d0;margin-bottom:20px;line-height:1.6">Encontramos <strong style="color:#e8dcc8">${hasBooks ? localBooks.length + ' livro(s)' : ''}${hasBooks && hasLoans ? ' e ' : ''}${hasLoans ? localLoans.length + ' empréstimo(s)' : ''}</strong> salvos localmente.<br>Enviando para a nuvem...</div>
+        <div id="migration-progress" style="background:rgba(74,122,204,0.15);border-radius:8px;height:8px;overflow:hidden;margin-bottom:12px">
+          <div id="migration-bar" style="height:100%;background:#4A7ACC;width:0%;border-radius:8px;transition:width 0.3s"></div>
+        </div>
+        <div id="migration-status" style="font-size:12px;color:#5a6a8a">Iniciando...</div>
+      </div>
+    </div>`;
+  document.body.appendChild(banner);
+
+  const setProgress = (pct, msg) => {
+    document.getElementById('migration-bar').style.width = pct + '%';
+    document.getElementById('migration-status').textContent = msg;
+  };
+
+  try {
+    // Build a map of old numeric id → new Firebase id for books
+    const bookIdMap = {};
+    const total = (hasBooks ? localBooks.length : 0) + (hasLoans ? localLoans.length : 0);
+    let done = 0;
+
+    if (hasBooks) {
+      for (const book of localBooks) {
+        const { id: oldId, ...data } = book;
+        // Clean up data
+        const clean = {
+          title: data.title || '',
+          author: data.author || '',
+          genre: data.genre || 'Outro',
+          status: data.status || 'Quero Ler',
+          rating: data.rating || 0,
+          notes: data.notes || '',
+          year: data.year || null,
+          shelf: data.shelf || '',
+          cover: data.cover || null,
+          dateAdded: data.dateAdded || new Date().toISOString().split('T')[0],
+        };
+        const ref = await addDoc(collection(db, 'books'), clean);
+        bookIdMap[oldId] = ref.id;
+        done++;
+        setProgress(Math.round(done/total*90), `Livro ${done}/${hasBooks ? localBooks.length : 0}: ${clean.title}`);
+      }
+    }
+
+    if (hasLoans) {
+      for (const loan of localLoans) {
+        const { id: oldId, bookId, ...data } = loan;
+        const newBookId = bookIdMap[bookId] || null;
+        if (!newBookId) continue; // skip if book not found
+        await addDoc(collection(db, 'loans'), {
+          bookId: newBookId,
+          borrower: data.borrower || '',
+          phone: data.phone || '',
+          loanDate: data.loanDate || '',
+          expectedReturn: data.expectedReturn || null,
+          returned: data.returned || false,
+          returnDate: data.returnDate || null,
+          notes: data.notes || '',
+        });
+        done++;
+        setProgress(Math.round(done/total*90), `Empréstimo: ${data.borrower}`);
+      }
+    }
+
+    setProgress(100, '✅ Migração concluída!');
+    localStorage.setItem(migratedKey, '1');
+    localStorage.removeItem('books');
+    localStorage.removeItem('loans');
+
+    setTimeout(() => {
+      banner.remove();
+      showToast('🎉 Dados migrados para a nuvem com sucesso!');
+    }, 1500);
+
+  } catch (err) {
+    console.error('Migration error:', err);
+    document.getElementById('migration-status').textContent = '⚠️ Erro na migração. Tente recarregar.';
+    setTimeout(() => banner.remove(), 3000);
+  }
+}
+
 // Real-time listeners
-onSnapshot(query(collection(db, 'books'), orderBy('dateAdded', 'desc')), snap => {
+let firstLoad = true;
+onSnapshot(query(collection(db, 'books'), orderBy('dateAdded', 'desc')), async snap => {
   books = snap.docs.map(d => ({ ...d.data(), id: d.id }));
   dbReady = true;
+  if (firstLoad) {
+    firstLoad = false;
+    await migrateLocalData();
+  }
   render();
   updateAlertBadge();
 });
