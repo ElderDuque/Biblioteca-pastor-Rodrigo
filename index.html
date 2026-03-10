@@ -450,7 +450,25 @@
   </div>
 </div>
 
-<script>
+<script type="module">
+// ═══════════════════════════════════════════
+// FIREBASE CONFIG
+// ═══════════════════════════════════════════
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyANPn4nMdbhJl2-G4q3OvhzkKqSv49gt04",
+  authDomain: "biblioteca-pastor-rodrigo.firebaseapp.com",
+  projectId: "biblioteca-pastor-rodrigo",
+  storageBucket: "biblioteca-pastor-rodrigo.firebasestorage.app",
+  messagingSenderId: "150154200370",
+  appId: "1:150154200370:web:bf94edb1ef3088ad37432b"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
 // ═══════════════════════════════════════════
 // DATA
 // ═══════════════════════════════════════════
@@ -458,20 +476,50 @@ const GENRES = ['Teologia','Romance','Ficção Científica','Fantasia','Terror',
 const STATUS_COLORS = {'Quero Ler':'#6B8E6B','Lendo':'#4A7ACC','Lido':'#4A7A9B','Pausado':'#8B7355'};
 const BOOK_COLORS = ['#0e2050','#0a1a4a','#152560','#1a2e70','#0d1c55','#162248','#1e2d6a','#0b1840'];
 
-let books = JSON.parse(localStorage.getItem('books') || 'null') || [
-  {id:1,title:'Propósito de Vida',author:'Rick Warren',genre:'Teologia',status:'Lido',rating:5,notes:'Leitura transformadora.',year:2002,shelf:'Estante A',dateAdded:'2024-01-10',cover:null},
-  {id:2,title:'Mere Christianity',author:'C.S. Lewis',genre:'Teologia',status:'Lido',rating:5,notes:'Apologética excelente.',year:1952,shelf:'Estante A',dateAdded:'2024-02-15',cover:null},
-  {id:3,title:'O Poder do Hábito',author:'Charles Duhigg',genre:'Autoajuda',status:'Lendo',rating:4,notes:'Muito prático.',year:2012,shelf:'Mesa',dateAdded:'2024-03-01',cover:null},
-  {id:4,title:'A Cabana',author:'William P. Young',genre:'Romance',status:'Lido',rating:4,notes:'',year:2007,shelf:'Estante B',dateAdded:'2024-03-20',cover:null},
-  {id:5,title:'Teologia Sistemática',author:'Wayne Grudem',genre:'Teologia',status:'Quero Ler',rating:0,notes:'',year:1994,shelf:'Estante B',dateAdded:'2024-04-01',cover:null},
-];
-let loans = JSON.parse(localStorage.getItem('loans') || 'null') || [
-  {id:1,bookId:2,borrower:'João Silva',phone:'(11) 99999-1111',loanDate:'2025-02-10',expectedReturn:'2025-03-10',returned:false,returnDate:null,notes:'Irmão da Igreja'},
-  {id:2,bookId:4,borrower:'Maria Souza',phone:'(11) 98888-2222',loanDate:'2025-01-05',expectedReturn:'2025-02-05',returned:true,returnDate:'2025-02-03',notes:''},
-];
+let books = [];
+let loans = [];
+let dbReady = false;
 
-function save() {
-  try { localStorage.setItem('books', JSON.stringify(books)); localStorage.setItem('loans', JSON.stringify(loans)); } catch(e) { console.warn('Storage full, compressing covers...'); }
+// Show loading state
+document.getElementById('header-sub').textContent = 'Conectando...';
+
+// Real-time listeners
+onSnapshot(query(collection(db, 'books'), orderBy('dateAdded', 'desc')), snap => {
+  books = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+  dbReady = true;
+  render();
+  updateAlertBadge();
+});
+
+onSnapshot(collection(db, 'loans'), snap => {
+  loans = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+  render();
+  updateAlertBadge();
+});
+
+async function save() {} // no-op, Firebase saves in real time
+
+async function addBook(data) {
+  showToast('💾 Salvando...');
+  await addDoc(collection(db, 'books'), data);
+}
+async function updateBook(id, data) {
+  await updateDoc(doc(db, 'books', id), data);
+}
+async function removeBook(id) {
+  await deleteDoc(doc(db, 'books', id));
+  // Remove related loans
+  const related = loans.filter(l => l.bookId === id);
+  for (const l of related) await deleteDoc(doc(db, 'loans', l.id));
+}
+async function addLoan(data) {
+  await addDoc(collection(db, 'loans'), data);
+}
+async function updateLoan(id, data) {
+  await updateDoc(doc(db, 'loans', id), data);
+}
+async function removeLoan(id) {
+  await deleteDoc(doc(db, 'loans', id));
 }
 
 // ═══════════════════════════════════════════
@@ -841,11 +889,11 @@ function openBookModal(bookId = null) {
 
 function closeBookModal() { document.getElementById('book-modal').classList.remove('open'); }
 
-function saveBook() {
+async function saveBook() {
   const title = document.getElementById('f-title').value.trim();
   const author = document.getElementById('f-author').value.trim();
   if (!title || !author) { alert('Título e autor são obrigatórios!'); return; }
-  const book = {
+  const data = {
     title, author,
     genre: document.getElementById('f-genre').value,
     status: document.getElementById('f-status').value,
@@ -856,17 +904,21 @@ function saveBook() {
     cover: currentCover,
     dateAdded: editingBookId ? bookById(editingBookId).dateAdded : new Date().toISOString().split('T')[0],
   };
-  if (editingBookId) { books = books.map(b => b.id===editingBookId ? {...book, id:editingBookId} : b); }
-  else { books.push({...book, id: Date.now()}); }
-  save(); closeBookModal(); render();
+  if (editingBookId) {
+    await updateBook(editingBookId, data);
+    showToast('✅ Livro atualizado!');
+  } else {
+    await addBook(data);
+    showToast('✅ Livro adicionado!');
+  }
+  closeBookModal();
 }
 
-function deleteBook(id) {
+async function deleteBook(id) {
   if (!confirm('Remover este livro?')) return;
-  books = books.filter(b => b.id!==id);
-  loans = loans.filter(l => l.bookId!==id);
+  await removeBook(id);
   if (expandedBook===id) expandedBook = null;
-  save(); render();
+  showToast('🗑 Livro removido');
 }
 
 function setRating(r) {
@@ -960,7 +1012,7 @@ function openLoanModal(bookId = null, loanId = null) {
   document.getElementById('loan-modal-title').textContent = loanId ? '✏ Editar Empréstimo' : '📤 Registrar Empréstimo';
   // Populate book select (only available books or current book)
   const sel = document.getElementById('lf-book');
-  sel.innerHTML = '<option value="">Selecione...</option>' +
+  sel.innerHTML = '<option value="">Selecione um livro...</option>' +
     books.filter(b => !isLoaned(b.id) || b.id === (loanId ? loans.find(l=>l.id===loanId)?.bookId : bookId))
       .map(b => `<option value="${b.id}">${b.title} — ${b.author}</option>`).join('');
   if (loanId) {
@@ -984,12 +1036,13 @@ function openLoanModal(bookId = null, loanId = null) {
 
 function closeLoanModal() { document.getElementById('loan-modal').classList.remove('open'); }
 
-function saveLoan() {
-  const bookId = parseInt(document.getElementById('lf-book').value);
+async function saveLoan() {
+  const bookId = document.getElementById('lf-book').value;
   const borrower = document.getElementById('lf-borrower').value.trim();
   if (!bookId || !borrower) { alert('Livro e nome são obrigatórios!'); return; }
-  const loan = {
-    bookId, borrower,
+  const data = {
+    bookId,
+    borrower,
     phone: document.getElementById('lf-phone').value.trim(),
     loanDate: document.getElementById('lf-date').value,
     expectedReturn: document.getElementById('lf-return').value || null,
@@ -997,20 +1050,25 @@ function saveLoan() {
     returned: editingLoanId ? loans.find(l=>l.id===editingLoanId).returned : false,
     returnDate: editingLoanId ? loans.find(l=>l.id===editingLoanId).returnDate : null,
   };
-  if (editingLoanId) loans = loans.map(l => l.id===editingLoanId ? {...loan, id:editingLoanId} : l);
-  else loans.push({...loan, id: Date.now()});
-  save(); closeLoanModal(); render();
+  if (editingLoanId) {
+    await updateLoan(editingLoanId, data);
+    showToast('✅ Empréstimo atualizado!');
+  } else {
+    await addLoan(data);
+    showToast('✅ Empréstimo registrado!');
+  }
+  closeLoanModal();
 }
 
-function markReturned(loanId) {
-  loans = loans.map(l => l.id===loanId ? {...l, returned:true, returnDate:new Date().toISOString().split('T')[0]} : l);
-  save(); render();
+async function markReturned(loanId) {
+  await updateLoan(loanId, { returned: true, returnDate: new Date().toISOString().split('T')[0] });
+  showToast('✅ Marcado como devolvido!');
 }
 
-function deleteLoan(id) {
+async function deleteLoan(id) {
   if (!confirm('Remover este registro?')) return;
-  loans = loans.filter(l => l.id!==id);
-  save(); render();
+  await removeLoan(id);
+  showToast('🗑 Registro removido');
 }
 
 // ═══════════════════════════════════════════
@@ -1216,14 +1274,49 @@ function scheduleDailyCheck() {
 document.getElementById('alert-panel').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeAlertPanel();
 });
+document.getElementById('book-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeBookModal(); });
+document.getElementById('loan-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeLoanModal(); });
 
 // Add pulse keyframe dynamically
 const style = document.createElement('style');
 style.textContent = `@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(224,85,85,0.4)}50%{box-shadow:0 0 0 6px rgba(224,85,85,0)}}`;
 document.head.appendChild(style);
 
-// INIT
-render();
+// PWA Install
+let deferredPrompt = null;
+function showInstallBtn() {
+  const btn = document.getElementById('install-btn');
+  if (btn && !window.matchMedia('(display-mode: standalone)').matches && !window.navigator.standalone) btn.style.display = 'block';
+}
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredPrompt = e; showInstallBtn();
+  setTimeout(() => { if (!window.matchMedia('(display-mode: standalone)').matches) document.getElementById('install-banner').classList.add('show'); }, 1500);
+});
+async function triggerInstall() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const r = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    if (r.outcome==='accepted') { document.getElementById('install-btn').style.display='none'; document.getElementById('install-banner').classList.remove('show'); }
+  } else {
+    if (/iphone|ipad|ipod/i.test(navigator.userAgent)) document.getElementById('ios-hint').classList.add('show');
+    else showToast('💡 Abra no Chrome e toque em "Instalar"');
+  }
+}
+document.getElementById('btn-install').addEventListener('click', () => triggerInstall());
+document.getElementById('btn-banner-close').addEventListener('click', () => document.getElementById('install-banner').classList.remove('show'));
+document.getElementById('btn-ios-close').addEventListener('click', () => document.getElementById('ios-hint').classList.remove('show'));
+
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+if (isIOS && !window.matchMedia('(display-mode: standalone)').matches && !window.navigator.standalone) {
+  showInstallBtn();
+  setTimeout(() => document.getElementById('ios-hint').classList.add('show'), 2000);
+}
+
+// Service Worker
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(console.warn);
+
+// Alert badge schedule (Firebase listeners trigger render automatically)
 scheduleDailyCheck();
 </script>
 </body>
