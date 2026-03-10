@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#C4943A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Biblioteca">
+<meta name="description" content="Organize e controle sua biblioteca e empréstimos">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Biblioteca do Pastor</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  :root{
+    --bg:#1a1510;--bg2:#1e1912;--bg3:rgba(255,255,255,0.04);
+    --gold:#C4943A;--gold2:rgba(196,148,58,0.18);--gold3:rgba(196,148,58,0.08);
+    --text:#e8dcc8;--muted:#7a6a55;--sub:#b8a890;
+    --red:#8B4A4A;--green:#6B8E6B;--blue:#4A7A9B;
+    --safe-top:env(safe-area-inset-top,0px);
+    --safe-bot:env(safe-area-inset-bottom,0px);
+  }
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Georgia','Times New Roman',serif;overscroll-behavior:none}
+  body{display:flex;flex-direction:column;overflow:hidden}
+
+  /* INSTALL BANNER */
+  #install-banner{
+    display:none;position:fixed;top:0;left:0;right:0;z-index:200;
+    background:linear-gradient(135deg,#2a1f0e,#1a1510);
+    border-bottom:2px solid var(--gold);
+    padding:12px 16px 12px calc(16px + var(--safe-top));
+    padding-top:calc(12px + var(--safe-top));
+    box-shadow:0 4px 20px rgba(0,0,0,0.6);
+    animation:slideDown 0.4s ease;
+  }
+  #install-banner.show{display:flex;align-items:center;gap:12px}
+  @keyframes slideDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}
+  .banner-icon{font-size:32px;flex-shrink:0}
+  .banner-text{flex:1}
+  .banner-title{font-size:14px;font-weight:bold;color:var(--gold)}
+  .banner-sub{font-size:11px;color:var(--muted);margin-top:2px}
+  .banner-btn{padding:8px 16px;border-radius:6px;border:none;cursor:pointer;font-family:inherit;font-size:12px;font-weight:bold}
+  .banner-install{background:var(--gold);color:var(--bg)}
+  .banner-close{background:transparent;color:var(--muted);font-size:18px;padding:6px 10px}
+
+  /* iOS INSTALL HINT */
+  #ios-hint{
+    display:none;position:fixed;bottom:80px;left:16px;right:16px;z-index:200;
+    background:#2a1f0e;border:1px solid var(--gold);border-radius:12px;
+    padding:14px 16px;box-shadow:0 8px 30px rgba(0,0,0,0.7);
+    animation:fadeIn 0.3s ease;
+  }
+  #ios-hint.show{display:block}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  .ios-hint-title{font-size:13px;font-weight:bold;color:var(--gold);margin-bottom:6px}
+  .ios-hint-steps{font-size:12px;color:var(--sub);line-height:1.8}
+  .ios-hint-close{position:absolute;top:10px;right:12px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer}
+  .ios-arrow{position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-top:10px solid var(--gold)}
+
+  /* HEADER */
+  #header{
+    flex-shrink:0;
+    padding:calc(12px + var(--safe-top)) 16px 0;
+    background:rgba(18,14,9,0.98);
+    border-bottom:1px solid rgba(196,148,58,0.2);
+    backdrop-filter:blur(12px);
+    position:sticky;top:0;z-index:50;
+  }
+  .header-top{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px}
+  .header-brand{display:flex;align-items:center;gap:10px}
+  .brand-icon{font-size:24px}
+  .brand-title{font-size:17px;font-weight:bold;color:var(--gold);letter-spacing:0.03em}
+  .brand-sub{font-size:10px;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-top:1px}
+  .add-btn{padding:8px 16px;background:var(--gold);color:var(--bg);border:none;border-radius:6px;font-family:inherit;font-weight:bold;font-size:13px;cursor:pointer;white-space:nowrap}
+
+  /* TABS */
+  .tabs{display:flex;gap:0;overflow-x:auto;scrollbar-width:none;border-top:1px solid rgba(196,148,58,0.12)}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:1;min-width:60px;padding:10px 8px;text-align:center;font-size:11px;color:var(--muted);border:none;background:none;cursor:pointer;font-family:inherit;border-bottom:2px solid transparent;transition:all 0.2s;white-space:nowrap}
+  .tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+
+  /* MAIN */
+  #main{flex:1;overflow-y:auto;padding:16px;padding-bottom:calc(16px + var(--safe-bot));-webkit-overflow-scrolling:touch}
+
+  /* FILTERS */
+  .filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+  .filter-input{flex:1;min-width:150px;background:rgba(255,255,255,0.06);border:1px solid rgba(196,148,58,0.22);color:var(--text);padding:9px 12px;border-radius:6px;font-family:inherit;font-size:13px;outline:none}
+  .filter-input::placeholder{color:var(--muted)}
+  .filter-select{background:rgba(255,255,255,0.06);border:1px solid rgba(196,148,58,0.22);color:var(--text);padding:9px 10px;border-radius:6px;font-family:inherit;font-size:12px;outline:none;cursor:pointer}
+
+  /* SHELF GRID */
+  .shelf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px}
+  .book-card{background:var(--bg3);border:1px solid rgba(196,148,58,0.14);border-radius:8px;overflow:hidden;cursor:pointer;transition:all 0.2s;position:relative}
+  .book-card.expanded{border-color:var(--gold);box-shadow:0 6px 24px rgba(196,148,58,0.15);transform:translateY(-2px)}
+  .card-stripe{height:4px}
+  .card-cover{width:100%;aspect-ratio:3/4;object-fit:cover;display:block}
+  .card-cover-placeholder{width:100%;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;padding:10px;font-size:11px;color:rgba(255,255,255,0.6);font-style:italic;text-align:center;line-height:1.4}
+  .card-body{padding:10px}
+  .card-title{font-size:12px;font-weight:bold;color:var(--text);line-height:1.3;margin-bottom:3px}
+  .card-author{font-size:10px;color:var(--muted);margin-bottom:6px}
+  .card-tag{display:inline-block;font-size:9px;padding:2px 7px;border-radius:20px}
+  .loan-badge{position:absolute;top:8px;right:6px;background:var(--red);color:#fff;font-size:8px;padding:2px 5px;border-radius:3px;font-weight:bold;letter-spacing:0.04em}
+  .card-expanded{border-top:1px solid rgba(196,148,58,0.15);padding:10px;margin-top:6px}
+  .loan-info{background:rgba(139,74,74,0.12);border-radius:4px;padding:7px 8px;font-size:10px;color:#c47a7a;line-height:1.6;margin-bottom:8px}
+  .card-notes{font-size:10px;color:var(--sub);font-style:italic;line-height:1.5;margin-bottom:8px}
+  .card-meta{font-size:10px;color:var(--muted);margin-bottom:8px}
+  .card-actions{display:flex;gap:5px;flex-wrap:wrap}
+
+  /* LIST VIEW */
+  .list-item{background:var(--bg3);border:1px solid rgba(196,148,58,0.12);border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:8px;border-left-width:4px}
+  .list-cover{width:42px;height:56px;border-radius:3px;object-fit:cover;flex-shrink:0;box-shadow:1px 2px 8px rgba(0,0,0,0.4)}
+  .list-cover-ph{width:42px;height:56px;border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:8px;color:rgba(255,255,255,0.5);text-align:center;padding:4px}
+  .list-info{flex:1;min-width:0}
+  .list-title{font-size:14px;font-weight:bold;color:var(--text)}
+  .list-sub{font-size:11px;color:var(--muted);margin-top:2px}
+  .list-loan{font-size:11px;color:#c47a7a;margin-top:3px}
+  .list-actions{display:flex;gap:5px;flex-shrink:0}
+
+  /* LOANS VIEW */
+  .loans-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px}
+  .section-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px;margin-top:20px}
+  .loan-card{background:var(--bg3);border:1px solid rgba(196,148,58,0.16);border-radius:8px;padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:center}
+  .loan-card.overdue{border-color:rgba(196,100,100,0.3)}
+  .loan-card-info{flex:1;min-width:0}
+  .loan-book-title{font-size:14px;font-weight:bold;color:var(--text)}
+  .loan-person{font-size:13px;color:var(--sub);margin-top:3px}
+  .loan-dates{font-size:11px;color:var(--muted);margin-top:3px}
+  .loan-note{font-size:11px;color:var(--muted);font-style:italic;margin-top:2px}
+  .loan-actions{display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0}
+  .overdue-tag{font-size:9px;padding:3px 7px;border-radius:3px;background:rgba(196,100,100,0.15);color:#c47a7a;border:1px solid rgba(196,100,100,0.25);font-weight:bold;white-space:nowrap}
+  .returned-card{background:rgba(255,255,255,0.02);border:1px solid rgba(196,148,58,0.07);border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;gap:12px;align-items:center;opacity:0.65}
+
+  /* STATS */
+  .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+  .stat-card{background:var(--bg3);border:1px solid rgba(196,148,58,0.15);border-radius:8px;padding:16px 12px}
+  .stat-icon{font-size:20px;margin-bottom:6px}
+  .stat-value{font-size:24px;font-weight:bold;color:var(--gold)}
+  .stat-label{font-size:10px;color:var(--muted);margin-top:3px}
+  .bar-wrap{background:rgba(255,255,255,0.06);border-radius:4px;height:7px;overflow:hidden;margin-top:5px}
+  .bar-fill{height:100%;border-radius:4px;transition:width 0.6s}
+
+  /* BUTTONS */
+  .btn{padding:7px 13px;border-radius:5px;border:none;cursor:pointer;font-family:inherit;font-size:12px;transition:all 0.15s;white-space:nowrap}
+  .btn-gold{background:rgba(196,148,58,0.2);color:var(--gold);border:1px solid rgba(196,148,58,0.3)}
+  .btn-green{background:rgba(107,142,107,0.2);color:var(--green);border:1px solid rgba(107,142,107,0.3)}
+  .btn-blue{background:rgba(74,122,155,0.2);color:var(--blue);border:1px solid rgba(74,122,155,0.3)}
+  .btn-red{background:rgba(139,74,74,0.2);color:#c47a7a;border:1px solid rgba(139,74,74,0.3)}
+  .btn-solid-gold{background:var(--gold);color:var(--bg);font-weight:bold}
+  .btn-solid-green{background:var(--green);color:#fff;font-weight:bold}
+
+  /* MODAL */
+  .modal-overlay{display:none;position:fixed;inset:0;z-index:150;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center}
+  .modal-overlay.open{display:flex}
+  .modal{background:var(--bg2);border:1px solid rgba(196,148,58,0.28);border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;padding:20px 16px calc(20px + var(--safe-bot));animation:slideUp 0.3s ease}
+  @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  .modal-handle{width:40px;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 auto 16px}
+  .modal-title{font-size:17px;font-weight:bold;color:var(--gold);margin-bottom:18px}
+  .form-group{margin-bottom:14px}
+  .form-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px}
+  .form-input{width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(196,148,58,0.22);color:var(--text);padding:10px 12px;border-radius:6px;font-family:inherit;font-size:13px;outline:none}
+  .form-input:focus{border-color:rgba(196,148,58,0.5)}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+  textarea.form-input{resize:vertical;min-height:70px}
+
+  /* COVER UPLOAD */
+  .cover-upload-area{display:flex;align-items:center;gap:14px}
+  .cover-preview{width:64px;height:85px;border-radius:4px;overflow:hidden;border:1px solid rgba(196,148,58,0.3);cursor:pointer;flex-shrink:0}
+  .cover-preview img{width:100%;height:100%;object-fit:cover}
+  .cover-placeholder{width:100%;height:100%;background:rgba(196,148,58,0.08);display:flex;align-items:center;justify-content:center;font-size:24px}
+  .cover-btns{display:flex;flex-direction:column;gap:6px}
+
+  /* AI SCAN */
+  .ai-scan-area{background:rgba(74,122,155,0.08);border:1px dashed rgba(74,122,155,0.3);border-radius:8px;padding:14px;margin-bottom:14px}
+  .ai-scan-title{font-size:12px;color:var(--blue);font-weight:bold;margin-bottom:6px}
+  .ai-scan-sub{font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5}
+  .ai-scan-btns{display:flex;gap:8px;flex-wrap:wrap}
+  .ai-result{background:rgba(107,142,107,0.1);border:1px solid rgba(107,142,107,0.25);border-radius:6px;padding:10px;margin-top:10px;font-size:12px;color:var(--sub);line-height:1.6}
+  .ai-loading{text-align:center;padding:12px;color:var(--muted);font-size:12px;font-style:italic}
+
+  /* STARS */
+  .stars{display:flex;gap:3px}
+  .star{font-size:22px;cursor:pointer;color:#3a3228;transition:transform 0.1s;user-select:none}
+  .star.filled{color:var(--gold)}
+  .star-sm{font-size:12px;cursor:default}
+
+  /* EMPTY */
+  .empty{text-align:center;color:var(--muted);padding:50px 20px;grid-column:1/-1}
+  .empty-icon{font-size:44px;margin-bottom:10px}
+
+  /* SCROLLBAR */
+  #main::-webkit-scrollbar{width:4px}
+  #main::-webkit-scrollbar-track{background:transparent}
+  #main::-webkit-scrollbar-thumb{background:rgba(196,148,58,0.2);border-radius:2px}
+
+  @media(max-width:400px){
+    .shelf-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+    .stats-grid{grid-template-columns:repeat(2,1fr)}
+  }
+</style>
+</head>
+<body>
+
+<!-- INSTALL BANNER (Android/Desktop) -->
+<div id="install-banner">
+  <div class="banner-icon">⛪</div>
+  <div class="banner-text">
+    <div class="banner-title">Instalar Biblioteca do Pastor</div>
+    <div class="banner-sub">Adicione à tela inicial para acesso rápido</div>
+  </div>
+  <button class="banner-btn banner-install" id="btn-install">Instalar</button>
+  <button class="banner-btn banner-close" id="btn-banner-close">✕</button>
+</div>
+
+<!-- iOS HINT -->
+<div id="ios-hint">
+  <button class="ios-hint-close" id="btn-ios-close">✕</button>
+  <div class="ios-hint-title">📱 Instalar no iPhone/iPad</div>
+  <div class="ios-hint-steps">
+    1. Toque em <strong>Compartilhar</strong> <span style="background:#3a3228;padding:1px 5px;border-radius:3px">⬆</span> no Safari<br>
+    2. Role para baixo e toque em <strong>"Adicionar à Tela Inicial"</strong><br>
+    3. Confirme tocando em <strong>Adicionar</strong>
+  </div>
+  <div class="ios-arrow"></div>
+</div>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="header-top">
+    <div class="header-brand">
+      <span class="brand-icon">⛪</span>
+      <div>
+        <div class="brand-title">Biblioteca do Pastor</div>
+        <div class="brand-sub" id="header-sub">Carregando...</div>
+      </div>
+    </div>
+    <button class="add-btn" onclick="openBookModal()">+ Livro</button>
+  </div>
+  <div class="tabs">
+    <button class="tab active" data-tab="shelf" onclick="switchTab('shelf')">🗂 Estante</button>
+    <button class="tab" data-tab="list" onclick="switchTab('list')">☰ Lista</button>
+    <button class="tab" data-tab="loans" onclick="switchTab('loans')" id="loans-tab">🤝 Empréstimos</button>
+    <button class="tab" data-tab="stats" onclick="switchTab('stats')">📊 Stats</button>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div id="main">
+  <div id="view-shelf"></div>
+  <div id="view-list" style="display:none"></div>
+  <div id="view-loans" style="display:none"></div>
+  <div id="view-stats" style="display:none"></div>
+</div>
+
+<!-- BOOK MODAL -->
+<div class="modal-overlay" id="book-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="book-modal-title">📖 Adicionar Livro</div>
+
+    <!-- AI SCAN -->
+    <div class="ai-scan-area">
+      <div class="ai-scan-title">🤖 Reconhecimento por IA</div>
+      <div class="ai-scan-sub">Tire uma foto ou envie a imagem da capa — a IA preenche o título e autor automaticamente!</div>
+      <div class="ai-scan-btns">
+        <button class="btn btn-blue" onclick="triggerCameraCapture()">📷 Câmera</button>
+        <button class="btn btn-blue" onclick="triggerGalleryForAI()">🖼 Galeria</button>
+      </div>
+      <div id="ai-result"></div>
+      <input type="file" id="ai-camera-input" accept="image/*" capture="environment" style="display:none" onchange="processAIImage(this)">
+      <input type="file" id="ai-gallery-input" accept="image/*" style="display:none" onchange="processAIImage(this)">
+    </div>
+
+    <!-- COVER UPLOAD -->
+    <div class="form-group">
+      <label class="form-label">Foto da Capa</label>
+      <div class="cover-upload-area">
+        <div class="cover-preview" onclick="triggerCoverUpload()">
+          <div id="cover-preview-inner">
+            <div class="cover-placeholder">📷</div>
+          </div>
+        </div>
+        <div class="cover-btns">
+          <button class="btn btn-gold" onclick="triggerCoverUpload()">Escolher foto</button>
+          <button class="btn btn-red" onclick="removeCover()" id="remove-cover-btn" style="display:none">Remover</button>
+        </div>
+        <input type="file" id="cover-input" accept="image/*" style="display:none" onchange="handleCoverUpload(this)">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Título *</label>
+      <input class="form-input" id="f-title" placeholder="Ex: Dom Casmurro">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Autor *</label>
+      <input class="form-input" id="f-author" placeholder="Ex: Machado de Assis">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Gênero</label>
+        <select class="form-input" id="f-genre">
+          <option>Teologia</option><option>Romance</option><option>Ficção Científica</option>
+          <option>Fantasia</option><option>Terror</option><option>Mistério</option>
+          <option>Biografia</option><option>História</option><option>Autoajuda</option>
+          <option>Técnico</option><option>Poesia</option><option>Outro</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-input" id="f-status">
+          <option>Quero Ler</option><option>Lendo</option><option>Lido</option><option>Pausado</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Ano</label>
+        <input class="form-input" id="f-year" type="number" placeholder="2024">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Estante/Local</label>
+        <input class="form-input" id="f-shelf" placeholder="Ex: Estante A">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Avaliação</label>
+      <div class="stars" id="star-rating">
+        <span class="star" onclick="setRating(1)">★</span>
+        <span class="star" onclick="setRating(2)">★</span>
+        <span class="star" onclick="setRating(3)">★</span>
+        <span class="star" onclick="setRating(4)">★</span>
+        <span class="star" onclick="setRating(5)">★</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Anotações</label>
+      <textarea class="form-input" id="f-notes" placeholder="Observações, resumo..."></textarea>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-gold" onclick="closeBookModal()">Cancelar</button>
+      <button class="btn btn-solid-gold" onclick="saveBook()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOAN MODAL -->
+<div class="modal-overlay" id="loan-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="loan-modal-title">📤 Registrar Empréstimo</div>
+    <div class="form-group">
+      <label class="form-label">Livro *</label>
+      <select class="form-input" id="lf-book"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Quem pegou *</label>
+      <input class="form-input" id="lf-borrower" placeholder="Nome da pessoa">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Telefone / Contato</label>
+      <input class="form-input" id="lf-phone" placeholder="(11) 99999-0000" type="tel">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Data do Empréstimo</label>
+        <input class="form-input" id="lf-date" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Previsão de Devolução</label>
+        <input class="form-input" id="lf-return" type="date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Observação</label>
+      <input class="form-input" id="lf-notes" placeholder="Ex: Líder de célula, amigo...">
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-gold" onclick="closeLoanModal()">Cancelar</button>
+      <button class="btn btn-solid-green" onclick="saveLoan()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════
+const GENRES = ['Teologia','Romance','Ficção Científica','Fantasia','Terror','Mistério','Biografia','História','Autoajuda','Técnico','Poesia','Outro'];
+const STATUS_COLORS = {'Quero Ler':'#6B8E6B','Lendo':'#C4943A','Lido':'#4A7A9B','Pausado':'#8B7355'};
+const BOOK_COLORS = ['#4A3728','#28433A','#283C4A','#432840','#433828','#2A3A28','#3A2828','#28283A'];
+
+let books = JSON.parse(localStorage.getItem('books') || 'null') || [
+  {id:1,title:'Propósito de Vida',author:'Rick Warren',genre:'Teologia',status:'Lido',rating:5,notes:'Leitura transformadora.',year:2002,shelf:'Estante A',dateAdded:'2024-01-10',cover:null},
+  {id:2,title:'Mere Christianity',author:'C.S. Lewis',genre:'Teologia',status:'Lido',rating:5,notes:'Apologética excelente.',year:1952,shelf:'Estante A',dateAdded:'2024-02-15',cover:null},
+  {id:3,title:'O Poder do Hábito',author:'Charles Duhigg',genre:'Autoajuda',status:'Lendo',rating:4,notes:'Muito prático.',year:2012,shelf:'Mesa',dateAdded:'2024-03-01',cover:null},
+  {id:4,title:'A Cabana',author:'William P. Young',genre:'Romance',status:'Lido',rating:4,notes:'',year:2007,shelf:'Estante B',dateAdded:'2024-03-20',cover:null},
+  {id:5,title:'Teologia Sistemática',author:'Wayne Grudem',genre:'Teologia',status:'Quero Ler',rating:0,notes:'',year:1994,shelf:'Estante B',dateAdded:'2024-04-01',cover:null},
+];
+let loans = JSON.parse(localStorage.getItem('loans') || 'null') || [
+  {id:1,bookId:2,borrower:'João Silva',phone:'(11) 99999-1111',loanDate:'2025-02-10',expectedReturn:'2025-03-10',returned:false,returnDate:null,notes:'Irmão da Igreja'},
+  {id:2,bookId:4,borrower:'Maria Souza',phone:'(11) 98888-2222',loanDate:'2025-01-05',expectedReturn:'2025-02-05',returned:true,returnDate:'2025-02-03',notes:''},
+];
+
+function save() {
+  try { localStorage.setItem('books', JSON.stringify(books)); localStorage.setItem('loans', JSON.stringify(loans)); } catch(e) { console.warn('Storage full, compressing covers...'); }
+}
+
+// ═══════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════
+const isLoaned = id => loans.some(l => l.bookId===id && !l.returned);
+const activeLoan = id => loans.find(l => l.bookId===id && !l.returned);
+const activeLoans = () => loans.filter(l => !l.returned);
+const overdueLoans = () => activeLoans().filter(l => l.expectedReturn && new Date(l.expectedReturn) < new Date());
+const bookById = id => books.find(b => b.id===id);
+const fmtDate = d => d ? new Date(d+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+const isOverdue = l => !l.returned && l.expectedReturn && new Date(l.expectedReturn) < new Date();
+const bookColor = t => BOOK_COLORS[t ? t.charCodeAt(0) % BOOK_COLORS.length : 0];
+
+function coverHTML(book, w, h) {
+  if (book.cover) return `<img src="${book.cover}" style="width:${w}px;height:${h}px;object-fit:cover;border-radius:3px;box-shadow:1px 2px 8px rgba(0,0,0,0.5)">`;
+  const c = bookColor(book.title);
+  return `<div style="width:${w}px;height:${h}px;border-radius:3px;background:linear-gradient(150deg,${c},${BOOK_COLORS[(BOOK_COLORS.indexOf(c)+1)%BOOK_COLORS.length]});display:flex;align-items:center;justify-content:center;padding:6px;box-shadow:1px 2px 8px rgba(0,0,0,0.5)"><span style="font-size:${Math.round(w*0.08)}px;color:rgba(255,255,255,0.6);text-align:center;line-height:1.3;font-style:italic">${book.title}</span></div>`;
+}
+
+function starsHTML(r, sm=false) {
+  return [1,2,3,4,5].map(i=>`<span style="font-size:${sm?'12px':'14px'};color:${i<=r?'#C4943A':'#3a3228'}">★</span>`).join('');
+}
+
+function tagHTML(text, color) {
+  return `<span style="font-size:9px;padding:2px 7px;border-radius:20px;background:${color}22;color:${color};border:1px solid ${color}33">${text}</span>`;
+}
+
+function updateHeader() {
+  const al = activeLoans().length, od = overdueLoans().length;
+  document.getElementById('header-sub').innerHTML = `${books.length} livros · ${al} emprestado${al!==1?'s':''}${od>0?` · <span style="color:#c47a7a">⚠ ${od} em atraso</span>`:''}`;
+  const lt = document.getElementById('loans-tab');
+  lt.textContent = `🤝 Empréstimos${al>0?' ('+al+')':''}`;
+}
+
+// ═══════════════════════════════════════════
+// TABS & STATE
+// ═══════════════════════════════════════════
+let currentTab = 'shelf';
+let expandedBook = null;
+let search = '', filterStatus = 'Todos', filterGenre = 'Todos', filterAvail = 'Todos', sortBy = 'dateAdded';
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab===tab));
+  ['shelf','list','loans','stats'].forEach(v => document.getElementById('view-'+v).style.display = v===tab?'block':'none');
+  render();
+}
+
+function render() {
+  updateHeader();
+  if (currentTab==='shelf') renderShelf();
+  else if (currentTab==='list') renderList();
+  else if (currentTab==='loans') renderLoans();
+  else if (currentTab==='stats') renderStats();
+}
+
+// ═══════════════════════════════════════════
+// FILTER BOOKS
+// ═══════════════════════════════════════════
+function filteredBooks() {
+  return books
+    .filter(b => { const q=search.toLowerCase(); return !q||b.title.toLowerCase().includes(q)||b.author.toLowerCase().includes(q); })
+    .filter(b => filterStatus==='Todos'||b.status===filterStatus)
+    .filter(b => filterGenre==='Todos'||b.genre===filterGenre)
+    .filter(b => filterAvail==='Todos'||(filterAvail==='Disponível'?!isLoaned(b.id):isLoaned(b.id)))
+    .sort((a,b) => {
+      if(sortBy==='title') return a.title.localeCompare(b.title);
+      if(sortBy==='author') return a.author.localeCompare(b.author);
+      if(sortBy==='rating') return b.rating-a.rating;
+      return new Date(b.dateAdded)-new Date(a.dateAdded);
+    });
+}
+
+function filtersHTML() {
+  return `
+  <div class="filters">
+    <input class="filter-input" placeholder="🔍 Título ou autor..." value="${search}" oninput="search=this.value;render()">
+    <select class="filter-select" onchange="filterStatus=this.value;render()">
+      <option ${filterStatus==='Todos'?'selected':''}>Todos</option>
+      <option ${filterStatus==='Quero Ler'?'selected':''}>Quero Ler</option>
+      <option ${filterStatus==='Lendo'?'selected':''}>Lendo</option>
+      <option ${filterStatus==='Lido'?'selected':''}>Lido</option>
+      <option ${filterStatus==='Pausado'?'selected':''}>Pausado</option>
+    </select>
+    <select class="filter-select" onchange="filterAvail=this.value;render()">
+      <option ${filterAvail==='Todos'?'selected':''}>Todos</option>
+      <option ${filterAvail==='Disponível'?'selected':''}>Disponível</option>
+      <option ${filterAvail==='Emprestado'?'selected':''}>Emprestado</option>
+    </select>
+    <select class="filter-select" onchange="sortBy=this.value;render()">
+      <option value="dateAdded" ${sortBy==='dateAdded'?'selected':''}>📅 Data</option>
+      <option value="title" ${sortBy==='title'?'selected':''}>🔤 Título</option>
+      <option value="author" ${sortBy==='author'?'selected':''}>👤 Autor</option>
+      <option value="rating" ${sortBy==='rating'?'selected':''}>⭐ Nota</option>
+    </select>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════
+// SHELF VIEW
+// ═══════════════════════════════════════════
+function renderShelf() {
+  const fb = filteredBooks();
+  const el = document.getElementById('view-shelf');
+  if (!fb.length) { el.innerHTML = filtersHTML() + `<div class="shelf-grid"><div class="empty"><div class="empty-icon">📭</div>Nenhum livro encontrado</div></div>`; return; }
+  el.innerHTML = filtersHTML() + `<div class="shelf-grid">${fb.map(book => shelfCard(book)).join('')}</div>`;
+}
+
+function shelfCard(book) {
+  const loaned = isLoaned(book.id);
+  const loan = activeLoan(book.id);
+  const exp = expandedBook === book.id;
+  const statusColor = loaned ? '#8B4A4A' : (STATUS_COLORS[book.status]||'#7a6a55');
+  let expHTML = '';
+  if (exp) {
+    expHTML = `<div class="card-expanded">
+      <div class="card-meta">${book.genre}${book.year?' · '+book.year:''}${book.shelf?' · '+book.shelf:''}</div>
+      ${loaned && loan ? `<div class="loan-info">📤 <strong>${loan.borrower}</strong><br>desde ${fmtDate(loan.loanDate)}${loan.expectedReturn?'<br>até '+fmtDate(loan.expectedReturn):''}</div>` : ''}
+      ${book.notes ? `<div class="card-notes">"${book.notes}"</div>` : ''}
+      <div class="card-actions">
+        <button class="btn btn-gold" onclick="event.stopPropagation();openBookModal(${book.id})">✏</button>
+        ${!loaned ? `<button class="btn btn-green" onclick="event.stopPropagation();openLoanModal(${book.id})">📤 Emprestar</button>` : ''}
+        ${loaned && loan ? `<button class="btn btn-blue" onclick="event.stopPropagation();markReturned(${loan.id})">✅ Devolvido</button>` : ''}
+        <button class="btn btn-red" onclick="event.stopPropagation();deleteBook(${book.id})">🗑</button>
+      </div>
+    </div>`;
+  }
+  return `
+  <div class="book-card${exp?' expanded':''}" onclick="toggleExpand(${book.id})">
+    <div class="card-stripe" style="background:${statusColor}"></div>
+    ${loaned ? `<div class="loan-badge">EMPRESTADO</div>` : ''}
+    <div style="padding:10px;display:flex;flex-direction:column;align-items:center;gap:8px">
+      ${coverHTML(book, 110, 147)}
+      <div style="width:100%;text-align:center">
+        <div class="card-title">${book.title}</div>
+        <div class="card-author">${book.author}</div>
+        <div>${tagHTML(loaned?'Emprestado':book.status, statusColor)}</div>
+        ${book.rating>0?`<div style="margin-top:4px;display:flex;justify-content:center">${starsHTML(book.rating,true)}</div>`:''}
+      </div>
+      ${expHTML}
+    </div>
+  </div>`;
+}
+
+function toggleExpand(id) { expandedBook = expandedBook===id ? null : id; render(); }
+
+// ═══════════════════════════════════════════
+// LIST VIEW
+// ═══════════════════════════════════════════
+function renderList() {
+  const fb = filteredBooks();
+  const el = document.getElementById('view-list');
+  if (!fb.length) { el.innerHTML = filtersHTML() + `<div class="empty"><div class="empty-icon">📭</div>Nenhum livro encontrado</div>`; return; }
+  el.innerHTML = filtersHTML() + fb.map(book => {
+    const loaned = isLoaned(book.id);
+    const loan = activeLoan(book.id);
+    const sc = loaned ? '#8B4A4A' : (STATUS_COLORS[book.status]||'#7a6a55');
+    return `<div class="list-item" style="border-left-color:${sc}">
+      ${coverHTML(book,42,56)}
+      <div class="list-info">
+        <div class="list-title">${book.title}</div>
+        <div class="list-sub">${book.author} · ${book.genre}${book.year?' · '+book.year:''}${book.shelf?' · '+book.shelf:''}</div>
+        ${loaned&&loan?`<div class="list-loan">📤 <strong>${loan.borrower}</strong> · ${fmtDate(loan.loanDate)}${loan.expectedReturn?' → até '+fmtDate(loan.expectedReturn):''}</div>`:''}
+        ${book.rating>0?`<div style="margin-top:3px">${starsHTML(book.rating,true)}</div>`:''}
+      </div>
+      <div class="list-actions">
+        <button class="btn btn-gold" onclick="openBookModal(${book.id})">✏</button>
+        ${!loaned?`<button class="btn btn-green" onclick="openLoanModal(${book.id})">📤</button>`:loan?`<button class="btn btn-blue" onclick="markReturned(${loan.id})">✅</button>`:''}
+        <button class="btn btn-red" onclick="deleteBook(${book.id})">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════
+// LOANS VIEW
+// ═══════════════════════════════════════════
+function renderLoans() {
+  const el = document.getElementById('view-loans');
+  const al = activeLoans();
+  const rl = loans.filter(l => l.returned);
+  let html = `<div class="loans-header">
+    <div>
+      <div style="font-size:16px;font-weight:bold;color:var(--gold)">Controle de Empréstimos</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px">${al.length} em aberto${overdueLoans().length>0?` · <span style="color:#c47a7a">⚠ ${overdueLoans().length} em atraso</span>`:''}</div>
+    </div>
+    <button class="btn btn-solid-green" onclick="openLoanModal()">+ Empréstimo</button>
+  </div>`;
+
+  if (al.length) {
+    html += `<div class="section-label" style="margin-top:0">Em aberto</div>`;
+    html += al.map(loan => {
+      const book = bookById(loan.bookId);
+      const ov = isOverdue(loan);
+      return `<div class="loan-card${ov?' overdue':''}">
+        ${book?coverHTML(book,42,56):''}
+        <div class="loan-card-info">
+          <div class="loan-book-title">${book?.title||'Livro removido'}</div>
+          <div class="loan-person">👤 <strong>${loan.borrower}</strong>${loan.phone?` · 📞 ${loan.phone}`:''}</div>
+          <div class="loan-dates">📅 ${fmtDate(loan.loanDate)}${loan.expectedReturn?` · <span style="color:${ov?'#c47a7a':'inherit'}">${ov?'⚠ Até':'Até'} ${fmtDate(loan.expectedReturn)}</span>`:''}</div>
+          ${loan.notes?`<div class="loan-note">💬 ${loan.notes}</div>`:''}
+        </div>
+        <div class="loan-actions">
+          ${ov?`<span class="overdue-tag">ATRASADO</span>`:''}
+          <button class="btn btn-green" onclick="markReturned(${loan.id})">✅ Devolvido</button>
+          <button class="btn btn-gold" onclick="openLoanModal(null,${loan.id})">✏ Editar</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  if (rl.length) {
+    html += `<div class="section-label">Histórico</div>`;
+    html += rl.map(loan => {
+      const book = bookById(loan.bookId);
+      return `<div class="returned-card">
+        ${book?coverHTML(book,36,48):''}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;color:var(--sub)">${book?.title||'Livro removido'}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">👤 ${loan.borrower} · ${fmtDate(loan.loanDate)} → ${fmtDate(loan.returnDate)}</div>
+        </div>
+        <span style="font-size:10px;padding:2px 8px;border-radius:3px;background:rgba(107,142,107,0.15);color:var(--green)">✅ Devolvido</span>
+        <button class="btn btn-red" onclick="deleteLoan(${loan.id})">🗑</button>
+      </div>`;
+    }).join('');
+  }
+
+  if (!loans.length) html += `<div class="empty"><div class="empty-icon">🤝</div>Nenhum empréstimo ainda</div>`;
+  el.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════
+// STATS VIEW
+// ═══════════════════════════════════════════
+function renderStats() {
+  const el = document.getElementById('view-stats');
+  const lido = books.filter(b=>b.status==='Lido').length;
+  const lendo = books.filter(b=>b.status==='Lendo').length;
+  const emp = activeLoans().length;
+  const atr = overdueLoans().length;
+  const rated = books.filter(b=>b.rating>0);
+  const avg = rated.length ? (rated.reduce((s,b)=>s+b.rating,0)/rated.length).toFixed(1) : '—';
+  const statusOpts = ['Quero Ler','Lendo','Lido','Pausado'];
+  const genreCounts = {};
+  books.forEach(b => genreCounts[b.genre]=(genreCounts[b.genre]||0)+1);
+
+  el.innerHTML = `
+  <div class="stats-grid">
+    ${[['📚','Total',books.length],['✅','Lidos',lido],['📖','Lendo',lendo],['📤','Emprestados',emp],['⚠️','Em Atraso',atr],['⭐','Média',avg+(avg!=='—'?' ★':'')]].map(([i,l,v])=>
+      `<div class="stat-card"><div class="stat-icon">${i}</div><div class="stat-value">${v}</div><div class="stat-label">${l}</div></div>`
+    ).join('')}
+  </div>
+  <div style="background:var(--bg3);border:1px solid rgba(196,148,58,0.15);border-radius:8px;padding:18px;margin-bottom:12px">
+    <div style="font-weight:bold;color:var(--gold);margin-bottom:14px">Status de Leitura</div>
+    ${statusOpts.map(s => {
+      const cnt = books.filter(b=>b.status===s).length;
+      const pct = books.length ? cnt/books.length*100 : 0;
+      return `<div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:12px">
+          <span style="color:${STATUS_COLORS[s]}">${s}</span><span style="color:var(--muted)">${cnt}</span>
+        </div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%;background:${STATUS_COLORS[s]}"></div></div>
+      </div>`;
+    }).join('')}
+  </div>
+  <div style="background:var(--bg3);border:1px solid rgba(196,148,58,0.15);border-radius:8px;padding:18px">
+    <div style="font-weight:bold;color:var(--gold);margin-bottom:12px">Por Gênero</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      ${Object.entries(genreCounts).sort((a,b)=>b[1]-a[1]).map(([g,c])=>
+        `<div style="padding:5px 12px;border-radius:20px;font-size:12px;background:var(--gold2);border:1px solid rgba(196,148,58,0.2);color:var(--gold)">${g} <strong>(${c})</strong></div>`
+      ).join('')}
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════
+// BOOK MODAL
+// ═══════════════════════════════════════════
+let editingBookId = null;
+let currentCover = null;
+let currentRating = 0;
+
+function openBookModal(bookId = null) {
+  editingBookId = bookId;
+  currentRating = 0;
+  currentCover = null;
+  document.getElementById('ai-result').innerHTML = '';
+  document.getElementById('book-modal-title').textContent = bookId ? '✏ Editar Livro' : '📖 Adicionar Livro';
+  if (bookId) {
+    const b = bookById(bookId);
+    document.getElementById('f-title').value = b.title;
+    document.getElementById('f-author').value = b.author;
+    document.getElementById('f-genre').value = b.genre;
+    document.getElementById('f-status').value = b.status;
+    document.getElementById('f-year').value = b.year || '';
+    document.getElementById('f-shelf').value = b.shelf || '';
+    document.getElementById('f-notes').value = b.notes || '';
+    setRating(b.rating || 0);
+    currentCover = b.cover;
+    updateCoverPreview();
+  } else {
+    document.getElementById('f-title').value = '';
+    document.getElementById('f-author').value = '';
+    document.getElementById('f-genre').value = 'Teologia';
+    document.getElementById('f-status').value = 'Quero Ler';
+    document.getElementById('f-year').value = new Date().getFullYear();
+    document.getElementById('f-shelf').value = '';
+    document.getElementById('f-notes').value = '';
+    setRating(0);
+    updateCoverPreview();
+  }
+  document.getElementById('book-modal').classList.add('open');
+}
+
+function closeBookModal() { document.getElementById('book-modal').classList.remove('open'); }
+
+function saveBook() {
+  const title = document.getElementById('f-title').value.trim();
+  const author = document.getElementById('f-author').value.trim();
+  if (!title || !author) { alert('Título e autor são obrigatórios!'); return; }
+  const book = {
+    title, author,
+    genre: document.getElementById('f-genre').value,
+    status: document.getElementById('f-status').value,
+    year: parseInt(document.getElementById('f-year').value) || null,
+    shelf: document.getElementById('f-shelf').value.trim(),
+    notes: document.getElementById('f-notes').value.trim(),
+    rating: currentRating,
+    cover: currentCover,
+    dateAdded: editingBookId ? bookById(editingBookId).dateAdded : new Date().toISOString().split('T')[0],
+  };
+  if (editingBookId) { books = books.map(b => b.id===editingBookId ? {...book, id:editingBookId} : b); }
+  else { books.push({...book, id: Date.now()}); }
+  save(); closeBookModal(); render();
+}
+
+function deleteBook(id) {
+  if (!confirm('Remover este livro?')) return;
+  books = books.filter(b => b.id!==id);
+  loans = loans.filter(l => l.bookId!==id);
+  if (expandedBook===id) expandedBook = null;
+  save(); render();
+}
+
+function setRating(r) {
+  currentRating = r;
+  document.querySelectorAll('#star-rating .star').forEach((s,i) => s.classList.toggle('filled', i<r));
+}
+
+// Cover upload
+function triggerCoverUpload() { document.getElementById('cover-input').click(); }
+function handleCoverUpload(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => { currentCover = e.target.result; updateCoverPreview(); };
+  reader.readAsDataURL(file);
+}
+function removeCover() { currentCover = null; updateCoverPreview(); }
+function updateCoverPreview() {
+  const inner = document.getElementById('cover-preview-inner');
+  const removeBtn = document.getElementById('remove-cover-btn');
+  if (currentCover) {
+    inner.innerHTML = `<img src="${currentCover}" style="width:100%;height:100%;object-fit:cover">`;
+    removeBtn.style.display = 'block';
+  } else {
+    inner.innerHTML = `<div class="cover-placeholder">📷</div>`;
+    removeBtn.style.display = 'none';
+  }
+}
+
+// ═══════════════════════════════════════════
+// AI COVER RECOGNITION
+// ═══════════════════════════════════════════
+function triggerCameraCapture() { document.getElementById('ai-camera-input').click(); }
+function triggerGalleryForAI() { document.getElementById('ai-gallery-input').click(); }
+
+async function processAIImage(input) {
+  const file = input.files[0]; if (!file) return;
+  const resultDiv = document.getElementById('ai-result');
+  resultDiv.innerHTML = `<div class="ai-loading">🔍 Analisando a capa com IA...</div>`;
+
+  // Also set as cover
+  const coverReader = new FileReader();
+  coverReader.onload = e => { currentCover = e.target.result; updateCoverPreview(); };
+  coverReader.readAsDataURL(file);
+
+  // Read as base64 for API
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const base64 = e.target.result.split(',')[1];
+    const mediaType = file.type || 'image/jpeg';
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 300,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+              { type: 'text', text: 'Esta é a capa de um livro. Identifique e responda SOMENTE em JSON válido, sem markdown, sem texto extra: {"title": "título do livro", "author": "nome do autor", "year": ano_de_publicacao_ou_null, "genre": "gênero mais provável entre: Teologia, Romance, Ficção Científica, Fantasia, Terror, Mistério, Biografia, História, Autoajuda, Técnico, Poesia, Outro"}' }
+            ]
+          }]
+        })
+      });
+      const data = await response.json();
+      const text = data.content?.map(c=>c.text||'').join('') || '';
+      const clean = text.replace(/```json|```/g,'').trim();
+      const info = JSON.parse(clean);
+      if (info.title) document.getElementById('f-title').value = info.title;
+      if (info.author) document.getElementById('f-author').value = info.author;
+      if (info.year) document.getElementById('f-year').value = info.year;
+      if (info.genre) document.getElementById('f-genre').value = info.genre;
+      resultDiv.innerHTML = `<div class="ai-result">✅ <strong>IA identificou:</strong><br>📖 ${info.title||'?'}<br>✍️ ${info.author||'?'}${info.year?`<br>📅 ${info.year}`:''}${info.genre?`<br>🏷 ${info.genre}`:''}<br><span style="font-size:10px;color:var(--muted)">Confira e ajuste se necessário</span></div>`;
+    } catch(err) {
+      resultDiv.innerHTML = `<div class="ai-result" style="border-color:rgba(139,74,74,0.3);background:rgba(139,74,74,0.1);color:#c47a7a">⚠️ Não foi possível reconhecer automaticamente. Preencha manualmente.</div>`;
+      console.error(err);
+    }
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+// ═══════════════════════════════════════════
+// LOAN MODAL
+// ═══════════════════════════════════════════
+let editingLoanId = null;
+
+function openLoanModal(bookId = null, loanId = null) {
+  editingLoanId = loanId;
+  document.getElementById('loan-modal-title').textContent = loanId ? '✏ Editar Empréstimo' : '📤 Registrar Empréstimo';
+  // Populate book select (only available books or current book)
+  const sel = document.getElementById('lf-book');
+  sel.innerHTML = '<option value="">Selecione...</option>' +
+    books.filter(b => !isLoaned(b.id) || b.id === (loanId ? loans.find(l=>l.id===loanId)?.bookId : bookId))
+      .map(b => `<option value="${b.id}">${b.title} — ${b.author}</option>`).join('');
+  if (loanId) {
+    const l = loans.find(lo=>lo.id===loanId);
+    sel.value = l.bookId;
+    document.getElementById('lf-borrower').value = l.borrower;
+    document.getElementById('lf-phone').value = l.phone||'';
+    document.getElementById('lf-date').value = l.loanDate;
+    document.getElementById('lf-return').value = l.expectedReturn||'';
+    document.getElementById('lf-notes').value = l.notes||'';
+  } else {
+    if (bookId) sel.value = bookId;
+    document.getElementById('lf-borrower').value = '';
+    document.getElementById('lf-phone').value = '';
+    document.getElementById('lf-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('lf-return').value = '';
+    document.getElementById('lf-notes').value = '';
+  }
+  document.getElementById('loan-modal').classList.add('open');
+}
+
+function closeLoanModal() { document.getElementById('loan-modal').classList.remove('open'); }
+
+function saveLoan() {
+  const bookId = parseInt(document.getElementById('lf-book').value);
+  const borrower = document.getElementById('lf-borrower').value.trim();
+  if (!bookId || !borrower) { alert('Livro e nome são obrigatórios!'); return; }
+  const loan = {
+    bookId, borrower,
+    phone: document.getElementById('lf-phone').value.trim(),
+    loanDate: document.getElementById('lf-date').value,
+    expectedReturn: document.getElementById('lf-return').value || null,
+    notes: document.getElementById('lf-notes').value.trim(),
+    returned: editingLoanId ? loans.find(l=>l.id===editingLoanId).returned : false,
+    returnDate: editingLoanId ? loans.find(l=>l.id===editingLoanId).returnDate : null,
+  };
+  if (editingLoanId) loans = loans.map(l => l.id===editingLoanId ? {...loan, id:editingLoanId} : l);
+  else loans.push({...loan, id: Date.now()});
+  save(); closeLoanModal(); render();
+}
+
+function markReturned(loanId) {
+  loans = loans.map(l => l.id===loanId ? {...l, returned:true, returnDate:new Date().toISOString().split('T')[0]} : l);
+  save(); render();
+}
+
+function deleteLoan(id) {
+  if (!confirm('Remover este registro?')) return;
+  loans = loans.filter(l => l.id!==id);
+  save(); render();
+}
+
+// ═══════════════════════════════════════════
+// PWA INSTALL
+// ═══════════════════════════════════════════
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Show banner after 1.5s if not already installed
+  setTimeout(() => {
+    if (!window.matchMedia('(display-mode: standalone)').matches) {
+      document.getElementById('install-banner').classList.add('show');
+    }
+  }, 1500);
+});
+
+document.getElementById('btn-install').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const result = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('install-banner').classList.remove('show');
+});
+
+document.getElementById('btn-banner-close').addEventListener('click', () => {
+  document.getElementById('install-banner').classList.remove('show');
+});
+
+// iOS detection
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+if (isIOS && !isStandalone) {
+  setTimeout(() => {
+    document.getElementById('ios-hint').classList.add('show');
+    // Adjust header for banner
+    document.getElementById('header').style.paddingTop = '12px';
+  }, 2000);
+}
+
+document.getElementById('btn-ios-close').addEventListener('click', () => {
+  document.getElementById('ios-hint').classList.remove('show');
+});
+
+// Close modals on overlay click
+document.getElementById('book-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeBookModal(); });
+document.getElementById('loan-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeLoanModal(); });
+
+// Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(console.warn);
+}
+
+// INIT
+render();
+</script>
+</body>
+</html>
