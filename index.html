@@ -450,13 +450,12 @@
   </div>
 </div>
 
-<script type="module">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
 // ═══════════════════════════════════════════
 // FIREBASE CONFIG
 // ═══════════════════════════════════════════
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
 const firebaseConfig = {
   apiKey: "AIzaSyANPn4nMdbhJl2-G4q3OvhzkKqSv49gt04",
   authDomain: "biblioteca-pastor-rodrigo.firebaseapp.com",
@@ -466,8 +465,8 @@ const firebaseConfig = {
   appId: "1:150154200370:web:bf94edb1ef3088ad37432b"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
 // ═══════════════════════════════════════════
 // DATA
@@ -600,10 +599,9 @@ async function migrateLocalData() {
 
 // Real-time listeners
 let firstLoad = true;
-onSnapshot(collection(db, 'books'), async snap => {
+db.collection('books').onSnapshot(async snap => {
   clearTimeout(connectionTimeout);
   books = snap.docs.map(d => ({ ...d.data(), id: d.id }));
-  // Sort locally by dateAdded descending
   books.sort((a, b) => (b.dateAdded || '').localeCompare(a.dateAdded || ''));
   dbReady = true;
   if (firstLoad) {
@@ -619,7 +617,7 @@ onSnapshot(collection(db, 'books'), async snap => {
   books = []; render();
 });
 
-onSnapshot(collection(db, 'loans'), snap => {
+db.collection('loans').onSnapshot(snap => {
   loans = snap.docs.map(d => ({ ...d.data(), id: d.id }));
   render();
   updateAlertBadge();
@@ -627,29 +625,27 @@ onSnapshot(collection(db, 'loans'), snap => {
   console.error('Loans error:', err);
 });
 
-async function save() {} // no-op, Firebase saves in real time
+async function save() {} // no-op
 
 async function addBook(data) {
-  showToast('💾 Salvando...');
-  await addDoc(collection(db, 'books'), data);
+  await db.collection('books').add(data);
 }
 async function updateBook(id, data) {
-  await updateDoc(doc(db, 'books', id), data);
+  await db.collection('books').doc(id).update(data);
 }
 async function removeBook(id) {
-  await deleteDoc(doc(db, 'books', id));
-  // Remove related loans
+  await db.collection('books').doc(id).delete();
   const related = loans.filter(l => l.bookId === id);
-  for (const l of related) await deleteDoc(doc(db, 'loans', l.id));
+  for (const l of related) await db.collection('loans').doc(l.id).delete();
 }
 async function addLoan(data) {
-  await addDoc(collection(db, 'loans'), data);
+  await db.collection('loans').add(data);
 }
 async function updateLoan(id, data) {
-  await updateDoc(doc(db, 'loans', id), data);
+  await db.collection('loans').doc(id).update(data);
 }
 async function removeLoan(id) {
-  await deleteDoc(doc(db, 'loans', id));
+  await db.collection('loans').doc(id).delete();
 }
 
 // ═══════════════════════════════════════════
@@ -1412,7 +1408,7 @@ const style = document.createElement('style');
 style.textContent = `@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(224,85,85,0.4)}50%{box-shadow:0 0 0 6px rgba(224,85,85,0)}}`;
 document.head.appendChild(style);
 
-// Alert badge schedule (Firebase listeners trigger render automatically)
+// Alert badge schedule
 scheduleDailyCheck();
 </script>
 </body>
