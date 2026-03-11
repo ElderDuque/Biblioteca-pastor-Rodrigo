@@ -767,15 +767,15 @@ function shelfCard(book) {
       ${loaned && loan ? `<div class="loan-info">📤 <strong>${loan.borrower}</strong><br>desde ${fmtDate(loan.loanDate)}${loan.expectedReturn?'<br>até '+fmtDate(loan.expectedReturn):''}</div>` : ''}
       ${book.notes ? `<div class="card-notes">"${book.notes}"</div>` : ''}
       <div class="card-actions">
-        <button class="btn btn-gold" onclick="event.stopPropagation();openBookModal(${book.id})">✏</button>
-        ${!loaned ? `<button class="btn btn-green" onclick="event.stopPropagation();openLoanModal(${book.id})">📤 Emprestar</button>` : ''}
-        ${loaned && loan ? `<button class="btn btn-blue" onclick="event.stopPropagation();markReturned(${loan.id})">✅ Devolvido</button>` : ''}
-        <button class="btn btn-red" onclick="event.stopPropagation();deleteBook(${book.id})">🗑</button>
+        <button class="btn btn-gold" onclick="event.stopPropagation();openBookModal('${book.id}')">✏</button>
+        ${!loaned ? `<button class="btn btn-green" onclick="event.stopPropagation();openLoanModal('${book.id}')">📤 Emprestar</button>` : ''}
+        ${loaned && loan ? `<button class="btn btn-blue" onclick="event.stopPropagation();markReturned('${loan.id}')">✅ Devolvido</button>` : ''}
+        <button class="btn btn-red" onclick="event.stopPropagation();deleteBook('${book.id}')">🗑</button>
       </div>
     </div>`;
   }
   return `
-  <div class="book-card${exp?' expanded':''}" onclick="toggleExpand(${book.id})">
+  <div class="book-card${exp?' expanded':''}" onclick="toggleExpand('${book.id}')">
     <div class="card-stripe" style="background:${statusColor}"></div>
     ${loaned ? `<div class="loan-badge">EMPRESTADO</div>` : ''}
     <div style="padding:10px;display:flex;flex-direction:column;align-items:center;gap:8px">
@@ -813,9 +813,9 @@ function renderList() {
         ${book.rating>0?`<div style="margin-top:3px">${starsHTML(book.rating,true)}</div>`:''}
       </div>
       <div class="list-actions">
-        <button class="btn btn-gold" onclick="openBookModal(${book.id})">✏</button>
-        ${!loaned?`<button class="btn btn-green" onclick="openLoanModal(${book.id})">📤</button>`:loan?`<button class="btn btn-blue" onclick="markReturned(${loan.id})">✅</button>`:''}
-        <button class="btn btn-red" onclick="deleteBook(${book.id})">🗑</button>
+        <button class="btn btn-gold" onclick="openBookModal('${book.id}')">✏</button>
+        ${!loaned?`<button class="btn btn-green" onclick="openLoanModal('${book.id}')">📤</button>`:loan?`<button class="btn btn-blue" onclick="markReturned('${loan.id}')">✅</button>`:''}
+        <button class="btn btn-red" onclick="deleteBook('${book.id}')">🗑</button>
       </div>
     </div>`;
   }).join('');
@@ -851,8 +851,8 @@ function renderLoans() {
         </div>
         <div class="loan-actions">
           ${ov?`<span class="overdue-tag">ATRASADO</span>`:''}
-          <button class="btn btn-green" onclick="markReturned(${loan.id})">✅ Devolvido</button>
-          <button class="btn btn-gold" onclick="openLoanModal(null,${loan.id})">✏ Editar</button>
+          <button class="btn btn-green" onclick="markReturned('${loan.id}')">✅ Devolvido</button>
+          <button class="btn btn-gold" onclick="openLoanModal(null,'${loan.id}')">✏ Editar</button>
         </div>
       </div>`;
     }).join('');
@@ -869,7 +869,7 @@ function renderLoans() {
           <div style="font-size:11px;color:var(--muted);margin-top:2px">👤 ${loan.borrower} · ${fmtDate(loan.loanDate)} → ${fmtDate(loan.returnDate)}</div>
         </div>
         <span style="font-size:10px;padding:2px 8px;border-radius:3px;background:rgba(107,142,107,0.15);color:var(--green)">✅ Devolvido</span>
-        <button class="btn btn-red" onclick="deleteLoan(${loan.id})">🗑</button>
+        <button class="btn btn-red" onclick="deleteLoan('${loan.id}')">🗑</button>
       </div>`;
     }).join('');
   }
@@ -1355,7 +1355,7 @@ function openAlertPanel() {
         <div class="alert-item-actions">
           <button class="btn btn-gold" onclick="copyMsg(${i})" style="font-size:11px">📋 Copiar mensagem</button>
           ${hasPhone ? `<a href="${waLink}" target="_blank" style="text-decoration:none"><button class="btn btn-green" style="font-size:11px">💬 WhatsApp</button></a>` : ''}
-          <button class="btn" style="font-size:11px;background:rgba(139,74,74,0.2);color:#c47a7a;border:1px solid rgba(139,74,74,0.3)" onclick="markReturned(${a.loan.id});closeAlertPanel()">✅ Devolvido</button>
+          <button class="btn" style="font-size:11px;background:rgba(139,74,74,0.2);color:#c47a7a;border:1px solid rgba(139,74,74,0.3)" onclick="markReturned('${a.loan.id}');closeAlertPanel()">✅ Devolvido</button>
         </div>
       </div>`;
     }).join('');
