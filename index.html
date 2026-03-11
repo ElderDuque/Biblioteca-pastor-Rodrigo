@@ -455,7 +455,7 @@
 // FIREBASE CONFIG
 // ═══════════════════════════════════════════
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyANPn4nMdbhJl2-G4q3OvhzkKqSv49gt04",
@@ -482,6 +482,15 @@ let dbReady = false;
 
 // Show loading state
 document.getElementById('header-sub').textContent = 'Conectando...';
+
+// Timeout — se Firebase não responder em 8s, mostra erro
+const connectionTimeout = setTimeout(() => {
+  if (!dbReady) {
+    document.getElementById('header-sub').innerHTML = '⚠️ Sem conexão — <span style="color:#4A7ACC;cursor:pointer" onclick="location.reload()">tentar novamente</span>';
+    books = []; loans = [];
+    render();
+  }
+}, 8000);
 
 // ═══════════════════════════════════════════
 // MIGRATION: localStorage → Firebase
@@ -591,8 +600,11 @@ async function migrateLocalData() {
 
 // Real-time listeners
 let firstLoad = true;
-onSnapshot(query(collection(db, 'books'), orderBy('dateAdded', 'desc')), async snap => {
+onSnapshot(collection(db, 'books'), async snap => {
+  clearTimeout(connectionTimeout);
   books = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+  // Sort locally by dateAdded descending
+  books.sort((a, b) => (b.dateAdded || '').localeCompare(a.dateAdded || ''));
   dbReady = true;
   if (firstLoad) {
     firstLoad = false;
@@ -600,12 +612,19 @@ onSnapshot(query(collection(db, 'books'), orderBy('dateAdded', 'desc')), async s
   }
   render();
   updateAlertBadge();
+}, err => {
+  clearTimeout(connectionTimeout);
+  console.error('Firestore error:', err);
+  document.getElementById('header-sub').innerHTML = '⚠️ Erro de conexão — <span style="color:#4A7ACC;cursor:pointer" onclick="location.reload()">tentar novamente</span>';
+  books = []; render();
 });
 
 onSnapshot(collection(db, 'loans'), snap => {
   loans = snap.docs.map(d => ({ ...d.data(), id: d.id }));
   render();
   updateAlertBadge();
+}, err => {
+  console.error('Loans error:', err);
 });
 
 async function save() {} // no-op, Firebase saves in real time
