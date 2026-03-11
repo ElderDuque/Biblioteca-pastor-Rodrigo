@@ -1412,40 +1412,6 @@ const style = document.createElement('style');
 style.textContent = `@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(224,85,85,0.4)}50%{box-shadow:0 0 0 6px rgba(224,85,85,0)}}`;
 document.head.appendChild(style);
 
-// PWA Install
-let deferredPrompt = null;
-function showInstallBtn() {
-  const btn = document.getElementById('install-btn');
-  if (btn && !window.matchMedia('(display-mode: standalone)').matches && !window.navigator.standalone) btn.style.display = 'block';
-}
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault(); deferredPrompt = e; showInstallBtn();
-  setTimeout(() => { if (!window.matchMedia('(display-mode: standalone)').matches) document.getElementById('install-banner').classList.add('show'); }, 1500);
-});
-async function triggerInstall() {
-  if (deferredPrompt) {
-    deferredPrompt.prompt();
-    const r = await deferredPrompt.userChoice;
-    deferredPrompt = null;
-    if (r.outcome==='accepted') { document.getElementById('install-btn').style.display='none'; document.getElementById('install-banner').classList.remove('show'); }
-  } else {
-    if (/iphone|ipad|ipod/i.test(navigator.userAgent)) document.getElementById('ios-hint').classList.add('show');
-    else showToast('💡 Abra no Chrome e toque em "Instalar"');
-  }
-}
-document.getElementById('btn-install').addEventListener('click', () => triggerInstall());
-document.getElementById('btn-banner-close').addEventListener('click', () => document.getElementById('install-banner').classList.remove('show'));
-document.getElementById('btn-ios-close').addEventListener('click', () => document.getElementById('ios-hint').classList.remove('show'));
-
-const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
-if (isIOS && !window.matchMedia('(display-mode: standalone)').matches && !window.navigator.standalone) {
-  showInstallBtn();
-  setTimeout(() => document.getElementById('ios-hint').classList.add('show'), 2000);
-}
-
-// Service Worker
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(console.warn);
-
 // Alert badge schedule (Firebase listeners trigger render automatically)
 scheduleDailyCheck();
 </script>
