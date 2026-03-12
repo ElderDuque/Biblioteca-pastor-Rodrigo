@@ -246,9 +246,68 @@
     transition:transform 0.35s ease;pointer-events:none;
   }
   #toast.show{transform:translateX(-50%) translateY(0)}
+
+  /* SPLASH SCREEN */
+  #splash {
+    position:fixed;inset:0;z-index:999;
+    background:linear-gradient(160deg, #060d1f 0%, #0e1428 40%, #111e45 100%);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:0;
+    transition:opacity 0.6s ease, transform 0.6s ease;
+  }
+  #splash.hide {
+    opacity:0;transform:scale(1.05);pointer-events:none;
+  }
+  .splash-icon {
+    width:110px;height:110px;
+    background:linear-gradient(135deg,#0d1a4a,#1a2e6a);
+    border-radius:28px;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 8px 40px rgba(74,122,204,0.35), 0 0 0 1px rgba(74,122,204,0.2);
+    animation:splashPop 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.2s both;
+  }
+  .splash-icon img { width:80px;height:80px;object-fit:contain; }
+  .splash-title {
+    font-size:22px;font-weight:bold;color:var(--gold);
+    margin-top:22px;letter-spacing:0.04em;
+    animation:splashFadeUp 0.5s ease 0.4s both;
+  }
+  .splash-sub {
+    font-size:13px;color:var(--muted);margin-top:6px;
+    animation:splashFadeUp 0.5s ease 0.5s both;
+  }
+  .splash-bar-wrap {
+    width:160px;height:3px;background:rgba(74,122,204,0.15);
+    border-radius:10px;margin-top:36px;overflow:hidden;
+    animation:splashFadeUp 0.5s ease 0.6s both;
+  }
+  .splash-bar {
+    height:100%;width:0%;background:var(--gold);border-radius:10px;
+    transition:width 0.1s linear;
+  }
+  @keyframes splashPop {
+    from{opacity:0;transform:scale(0.6)}
+    to{opacity:1;transform:scale(1)}
+  }
+  @keyframes splashFadeUp {
+    from{opacity:0;transform:translateY(12px)}
+    to{opacity:1;transform:translateY(0)}
+  }
 </style>
 </head>
 <body>
+
+<!-- SPLASH SCREEN -->
+<div id="splash">
+  <div class="splash-icon">
+    <img src="icon-192.png" alt="Biblioteca">
+  </div>
+  <div class="splash-title">Biblioteca do Pastor</div>
+  <div class="splash-sub">Carregando sua biblioteca...</div>
+  <div class="splash-bar-wrap">
+    <div class="splash-bar" id="splash-bar"></div>
+  </div>
+</div>
 
 <!-- TOAST -->
 <div id="toast">📋 Mensagem copiada!</div>
@@ -484,9 +543,28 @@ let dbReady = false;
 // Show loading state
 document.getElementById('header-sub').textContent = 'Conectando...';
 
-// Timeout — se Firebase não responder em 8s, mostra erro
+// Splash screen progress animation
+let splashProgress = 0;
+const splashBar = document.getElementById('splash-bar');
+const splashInterval = setInterval(() => {
+  splashProgress = Math.min(splashProgress + (dbReady ? 15 : 2), 90);
+  if (splashBar) splashBar.style.width = splashProgress + '%';
+}, 80);
+
+function hideSplash() {
+  clearInterval(splashInterval);
+  if (splashBar) splashBar.style.width = '100%';
+  setTimeout(() => {
+    const splash = document.getElementById('splash');
+    if (splash) {
+      splash.classList.add('hide');
+      setTimeout(() => splash.remove(), 700);
+    }
+  }, 300);
+}
 const connectionTimeout = setTimeout(() => {
   if (!dbReady) {
+    hideSplash();
     document.getElementById('header-sub').innerHTML = '⚠️ Sem conexão — <span style="color:#4A7ACC;cursor:pointer" onclick="location.reload()">tentar novamente</span>';
     books = []; loans = [];
     render();
@@ -608,6 +686,7 @@ db.collection('books').onSnapshot(async snap => {
   dbReady = true;
   if (firstLoad) {
     firstLoad = false;
+    hideSplash();
     await migrateLocalData();
   }
   render();
