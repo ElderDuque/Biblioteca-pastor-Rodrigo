@@ -11,6 +11,8 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Biblioteca do Pastor</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   :root{
@@ -305,7 +307,8 @@
     </div>
   </div>
   <div class="tabs">
-    <button class="tab active" data-tab="shelf" onclick="switchTab('shelf')">🗂 Estante</button>
+    <button class="tab active" data-tab="home" onclick="switchTab('home')">🏠 Início</button>
+    <button class="tab" data-tab="shelf" onclick="switchTab('shelf')">🗂 Estante</button>
     <button class="tab" data-tab="list" onclick="switchTab('list')">☰ Lista</button>
     <button class="tab" data-tab="loans" onclick="switchTab('loans')" id="loans-tab">🤝 Empréstimos</button>
     <button class="tab" data-tab="stats" onclick="switchTab('stats')">📊 Stats</button>
@@ -314,7 +317,8 @@
 
 <!-- MAIN CONTENT -->
 <div id="main">
-  <div id="view-shelf"></div>
+  <div id="view-home"></div>
+  <div id="view-shelf" style="display:none"></div>
   <div id="view-list" style="display:none"></div>
   <div id="view-loans" style="display:none"></div>
   <div id="view-stats" style="display:none"></div>
@@ -450,8 +454,6 @@
   </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
 // ═══════════════════════════════════════════
 // FIREBASE CONFIG
@@ -684,23 +686,150 @@ function updateHeader() {
 // ═══════════════════════════════════════════
 // TABS & STATE
 // ═══════════════════════════════════════════
-let currentTab = 'shelf';
+let currentTab = 'home';
 let expandedBook = null;
 let search = '', filterStatus = 'Todos', filterGenre = 'Todos', filterAvail = 'Todos', sortBy = 'dateAdded';
 
 function switchTab(tab) {
   currentTab = tab;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab===tab));
-  ['shelf','list','loans','stats'].forEach(v => document.getElementById('view-'+v).style.display = v===tab?'block':'none');
+  ['home','shelf','list','loans','stats'].forEach(v => document.getElementById('view-'+v).style.display = v===tab?'block':'none');
   render();
 }
 
 function render() {
   updateHeader();
-  if (currentTab==='shelf') renderShelf();
+  if (currentTab==='home') renderHome();
+  else if (currentTab==='shelf') renderShelf();
   else if (currentTab==='list') renderList();
   else if (currentTab==='loans') renderLoans();
   else if (currentTab==='stats') renderStats();
+}
+
+// ═══════════════════════════════════════════
+// HOME VIEW — BUSCA RÁPIDA
+// ═══════════════════════════════════════════
+let homeSearch = '';
+let homeMode = 'item';
+
+function renderHome() {
+  const el = document.getElementById('view-home');
+  const locations = [...new Set(books.map(b => b.shelf).filter(Boolean))].sort();
+  const overdue = overdueLoans();
+
+  el.innerHTML = `
+  <div style="margin-bottom:16px">
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <input class="filter-input" style="flex:1;font-size:14px;padding:12px 16px"
+        placeholder="🔍 Digite o título ou local..."
+        value="${homeSearch}"
+        oninput="homeSearch=this.value;renderHome()">
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="homeMode='item';renderHome()" style="flex:1;padding:11px;border-radius:8px;border:2px solid ${homeMode==='item'?'var(--gold)':'rgba(74,122,204,0.2)'};background:${homeMode==='item'?'rgba(74,122,204,0.2)':'transparent'};color:${homeMode==='item'?'var(--gold)':'var(--muted)'};font-family:inherit;font-size:13px;font-weight:bold;cursor:pointer">📚 Por Item</button>
+      <button onclick="homeMode='local';renderHome()" style="flex:1;padding:11px;border-radius:8px;border:2px solid ${homeMode==='local'?'var(--gold)':'rgba(74,122,204,0.2)'};background:${homeMode==='local'?'rgba(74,122,204,0.2)':'transparent'};color:${homeMode==='local'?'var(--gold)':'var(--muted)'};font-family:inherit;font-size:13px;font-weight:bold;cursor:pointer">📍 Por Local</button>
+    </div>
+  </div>
+  ${overdue.length ? `<div style="background:rgba(139,74,74,0.15);border:1px solid rgba(139,74,74,0.3);border-radius:8px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;cursor:pointer" onclick="switchTab('loans')"><span style="font-size:22px">⚠️</span><div><div style="font-size:13px;font-weight:bold;color:#c47a7a">${overdue.length} empréstimo${overdue.length>1?'s':''} em atraso</div><div style="font-size:11px;color:var(--muted)">Toque para ver detalhes</div></div></div>` : ''}
+  ${homeMode === 'item' ? renderHomeByItem() : renderHomeByLocal(locations)}`;
+}
+
+function renderHomeByItem() {
+  const q = homeSearch.toLowerCase();
+  const filtered = books.filter(b => !q || b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q));
+  if (!filtered.length) return `<div class="empty"><div class="empty-icon">🔍</div>Nenhum livro encontrado</div>`;
+  return `<div style="display:flex;flex-direction:column;gap:10px">
+    ${filtered.map(book => {
+      const loaned = isLoaned(book.id);
+      const loan = activeLoan(book.id);
+      const sc = loaned ? '#8B4A4A' : (STATUS_COLORS[book.status]||'#5a6a8a');
+      return `<div style="background:var(--bg3);border:1px solid rgba(74,122,204,0.14);border-left:4px solid ${sc};border-radius:8px;padding:12px;display:flex;gap:12px;align-items:center;cursor:pointer" onclick="switchTab('shelf');setTimeout(()=>{toggleExpand('${book.id}')},200)">
+        ${coverHTML(book, 48, 64)}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:bold;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${book.title}</div>
+          <div style="font-size:12px;color:var(--sub);margin-top:2px">${book.author}</div>
+          <div style="display:flex;gap:6px;margin-top:5px;align-items:center;flex-wrap:wrap">
+            ${tagHTML(loaned?'Emprestado':book.status, sc)}
+            ${book.shelf ? `<span style="font-size:10px;color:var(--muted)">📍 ${book.shelf}</span>` : ''}
+          </div>
+          ${loaned && loan ? `<div style="font-size:11px;color:#c47a7a;margin-top:4px">📤 ${loan.borrower}${loan.expectedReturn?' · até '+fmtDate(loan.expectedReturn):''}</div>` : ''}
+        </div>
+        ${book.rating>0?`<div>${starsHTML(book.rating,true)}</div>`:''}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function getLocationIcon(loc) {
+  const l = loc.toLowerCase();
+  if (l.includes('sala')) return '🛋️';
+  if (l.includes('quarto')) return '🛏️';
+  if (l.includes('gabinete') || l.includes('pastor')) return '⛪';
+  if (l.includes('estante')) return '📚';
+  if (l.includes('mesa')) return '🪑';
+  if (l.includes('escritório') || l.includes('escritorio')) return '💼';
+  if (l.includes('casa')) return '🏠';
+  if (l.includes('igreja')) return '⛪';
+  return '📍';
+}
+
+function toggleLocation(loc) {
+  const key = loc.replace(/[\s/]/g,'_');
+  const el = document.getElementById('loc-books-'+key);
+  const arrow = document.getElementById('loc-arrow-'+key);
+  if (!el) return;
+  const hidden = el.style.display === 'none';
+  el.style.display = hidden ? 'flex' : 'none';
+  if (hidden) el.style.flexDirection = 'column';
+  arrow.textContent = hidden ? '▾' : '▸';
+}
+
+function renderHomeByLocal(locations) {
+  const q = homeSearch.toLowerCase();
+  const filteredLocs = q ? locations.filter(l => l.toLowerCase().includes(q) || books.filter(b=>b.shelf===l).some(b=>b.title.toLowerCase().includes(q))) : locations;
+  const noLocation = books.filter(b => !b.shelf);
+
+  if (!filteredLocs.length && noLocation.length === 0) {
+    return `<div class="empty"><div class="empty-icon">📍</div>Adicione locais nos livros para usar esta busca!<br><br><button class="btn btn-gold" onclick="switchTab('shelf')" style="margin-top:8px">Ir para Estante</button></div>`;
+  }
+
+  let html = '';
+  for (const loc of filteredLocs) {
+    const key = loc.replace(/[\s/]/g,'_');
+    const booksHere = q ? books.filter(b => b.shelf===loc && (b.title.toLowerCase().includes(q)||loc.toLowerCase().includes(q))) : books.filter(b=>b.shelf===loc);
+    const loanedHere = booksHere.filter(b=>isLoaned(b.id)).length;
+    html += `<div style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(74,122,204,0.1);border-radius:8px;border:1px solid rgba(74,122,204,0.2);cursor:pointer" onclick="toggleLocation('${loc}')">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px">${getLocationIcon(loc)}</span>
+          <div>
+            <div style="font-size:14px;font-weight:bold;color:var(--gold)">${loc}</div>
+            <div style="font-size:11px;color:var(--muted)">${booksHere.length} livro${booksHere.length!==1?'s':''}${loanedHere>0?' · <span style="color:#c47a7a">'+loanedHere+' emprestado'+(loanedHere>1?'s':'')+'</span>':''}</div>
+          </div>
+        </div>
+        <span style="color:var(--muted);font-size:16px" id="loc-arrow-${key}">▾</span>
+      </div>
+      <div id="loc-books-${key}" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;padding-left:4px">
+        ${booksHere.map(book => {
+          const loaned = isLoaned(book.id);
+          const loan = activeLoan(book.id);
+          const sc = loaned ? '#8B4A4A' : (STATUS_COLORS[book.status]||'#5a6a8a');
+          return `<div style="background:var(--bg3);border:1px solid rgba(74,122,204,0.1);border-left:3px solid ${sc};border-radius:6px;padding:10px 12px;display:flex;gap:10px;align-items:center">
+            ${coverHTML(book, 38, 50)}
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:bold;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${book.title}</div>
+              <div style="font-size:11px;color:var(--sub)">${book.author}</div>
+              ${loaned && loan ? `<div style="font-size:11px;color:#c47a7a;margin-top:3px">📤 ${loan.borrower}</div>` : `<div style="font-size:10px;color:var(--muted);margin-top:3px">${book.status}</div>`}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+  if (!q && noLocation.length) {
+    html += `<div style="padding:10px 14px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid rgba(255,255,255,0.07)"><div style="font-size:12px;color:var(--muted)">📦 Sem local definido: ${noLocation.length} livro${noLocation.length!==1?'s':''}</div></div>`;
+  }
+  return html;
 }
 
 // ═══════════════════════════════════════════
@@ -1230,13 +1359,11 @@ async function triggerInstall() {
       document.getElementById('install-btn').style.display = 'none';
       document.getElementById('install-banner').classList.remove('show');
     }
+  } else if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
+    document.getElementById('ios-hint').classList.add('show');
   } else {
-    // No prompt available — show iOS hint or instructions
-    if (isIOS) {
-      document.getElementById('ios-hint').classList.add('show');
-    } else {
-      showToast('💡 Abra no Chrome e toque em "Instalar"');
-    }
+    // Android Chrome — show manual install instructions
+    showToast('⬆️ Toque nos 3 pontinhos → "Adicionar à tela inicial"');
   }
 }
 
