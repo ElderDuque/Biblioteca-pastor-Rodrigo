@@ -74,6 +74,13 @@
   .brand-icon{font-size:24px}
   .brand-title{font-size:17px;font-weight:bold;color:var(--gold);letter-spacing:0.03em}
   .brand-sub{font-size:10px;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-top:1px}
+  .status-dot{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:bold;letter-spacing:0.05em;text-transform:uppercase;padding:2px 8px;border-radius:20px;margin-top:3px}
+  .status-dot::before{content:'';width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .status-online{color:#6fcf97;background:rgba(111,207,151,0.12);}
+  .status-online::before{background:#6fcf97;box-shadow:0 0 6px #6fcf97;animation:blink 2s infinite}
+  .status-offline{color:#e05555;background:rgba(224,85,85,0.12);}
+  .status-offline::before{background:#e05555;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0.4}}
   .add-btn{padding:8px 16px;background:var(--gold);color:var(--bg);border:none;border-radius:6px;font-family:inherit;font-weight:bold;font-size:13px;cursor:pointer;white-space:nowrap}
 
   /* TABS */
@@ -354,6 +361,7 @@
       <div>
         <div class="brand-title">Biblioteca do Pastor</div>
         <div class="brand-sub" id="header-sub">Carregando...</div>
+        <div class="status-dot status-online" id="status-indicator">Online</div>
       </div>
     </div>
     <div style="display:flex;gap:8px;align-items:center">
@@ -1616,6 +1624,22 @@ document.getElementById('alert-panel').addEventListener('click', e => {
 const style = document.createElement('style');
 style.textContent = `@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(224,85,85,0.4)}50%{box-shadow:0 0 0 6px rgba(224,85,85,0)}}`;
 document.head.appendChild(style);
+
+// Online/Offline indicator
+function updateStatus() {
+  const el = document.getElementById('status-indicator');
+  if (!el) return;
+  if (navigator.onLine) {
+    el.textContent = 'Online';
+    el.className = 'status-dot status-online';
+  } else {
+    el.textContent = 'Offline';
+    el.className = 'status-dot status-offline';
+  }
+}
+updateStatus();
+window.addEventListener('online', updateStatus);
+window.addEventListener('offline', updateStatus);
 
 // Alert badge schedule
 scheduleDailyCheck();
