@@ -458,9 +458,28 @@
         <input class="form-input" id="f-year" type="number" placeholder="2024">
       </div>
       <div class="form-group">
-        <label class="form-label">Estante/Local</label>
-        <input class="form-input" id="f-shelf" placeholder="Ex: Estante A">
+        <label class="form-label">Estante</label>
+        <input class="form-input" id="f-shelf" placeholder="Ex: Estante A" oninput="updateShelfPhotoPreview()">
       </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Prateleira</label>
+        <input class="form-input" id="f-shelf-row" placeholder="Ex: Prateleira 2">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Posição</label>
+        <input class="form-input" id="f-shelf-pos" placeholder="Ex: Posição 3">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">📷 Foto da Estante <span style="font-size:10px;color:var(--muted)">(compartilhada com todos os livros deste local)</span></label>
+      <div id="shelf-photo-preview" style="margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="btn btn-blue" onclick="triggerShelfPhotoUpload()" style="font-size:12px">📷 Foto da estante</button>
+        <button type="button" class="btn btn-red" id="btn-remove-shelf-photo" onclick="removeShelfPhoto()" style="font-size:12px;display:none">🗑 Remover</button>
+      </div>
+      <input type="file" id="shelf-photo-input" accept="image/*" style="display:none" onchange="handleShelfPhotoUpload(this)">
     </div>
     <div class="form-group">
       <label class="form-label">Avaliação</label>
@@ -732,6 +751,29 @@ db.collection('loans').onSnapshot(snap => {
   console.error('Loans error:', err);
 });
 
+// Shelf photos collection
+let shelfPhotos = {}; // { shelfName: base64 }
+db.collection('shelfPhotos').onSnapshot(snap => {
+  shelfPhotos = {};
+  snap.docs.forEach(d => { shelfPhotos[d.id] = d.data().photo; });
+  render();
+}, err => console.warn('ShelfPhotos error:', err));
+
+async function saveShelfPhoto(shelfName, photoBase64) {
+  const key = shelfName.trim().replace(/[^a-zA-Z0-9_\-]/g, '_');
+  if (!key) return;
+  await db.collection('shelfPhotos').doc(key).set({ photo: photoBase64, name: shelfName.trim() });
+}
+async function deleteShelfPhoto(shelfName) {
+  const key = shelfName.trim().replace(/[^a-zA-Z0-9_\-]/g, '_');
+  await db.collection('shelfPhotos').doc(key).delete();
+}
+function getShelfPhoto(shelfName) {
+  if (!shelfName) return null;
+  const key = shelfName.trim().replace(/[^a-zA-Z0-9_\-]/g, '_');
+  return shelfPhotos[key] || null;
+}
+
 async function save() {} // no-op
 
 async function addBook(data) {
@@ -855,7 +897,7 @@ function renderHomeByItem() {
           <div style="font-size:12px;color:var(--sub);margin-top:2px">${book.author}</div>
           <div style="display:flex;gap:6px;margin-top:5px;align-items:center;flex-wrap:wrap">
             ${tagHTML(loaned?'Emprestado':book.status, sc)}
-            ${book.shelf ? `<span style="font-size:10px;color:var(--muted)">📍 ${book.shelf}</span>` : ''}
+            ${book.shelf||book.shelfRow||book.shelfPos ? `<span style="font-size:10px;color:var(--muted)">📚 ${[book.shelf,book.shelfRow,book.shelfPos].filter(Boolean).join(' · ')}</span>` : ''}
           </div>
           ${loaned && loan ? `<div style="font-size:11px;color:#c47a7a;margin-top:4px">📤 ${loan.borrower}${loan.expectedReturn?' · até '+fmtDate(loan.expectedReturn):''}</div>` : ''}
         </div>
@@ -903,16 +945,11 @@ function renderHomeByLocal(locations) {
     const key = loc.replace(/[\s/]/g,'_');
     const booksHere = q ? books.filter(b => b.shelf===loc && (b.title.toLowerCase().includes(q)||loc.toLowerCase().includes(q))) : books.filter(b=>b.shelf===loc);
     const loanedHere = booksHere.filter(b=>isLoaned(b.id)).length;
+    const locPhoto = getShelfPhoto(loc);
     html += `<div style="margin-bottom:14px">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(74,122,204,0.1);border-radius:8px;border:1px solid rgba(74,122,204,0.2);cursor:pointer" onclick="toggleLocation('${loc}')">
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-size:20px">${getLocationIcon(loc)}</span>
-          <div>
-            <div style="font-size:14px;font-weight:bold;color:var(--gold)">${loc}</div>
-            <div style="font-size:11px;color:var(--muted)">${booksHere.length} livro${booksHere.length!==1?'s':''}${loanedHere>0?' · <span style="color:#c47a7a">'+loanedHere+' emprestado'+(loanedHere>1?'s':'')+'</span>':''}</div>
-          </div>
-        </div>
-        <span style="color:var(--muted);font-size:16px" id="loc-arrow-${key}">▾</span>
+      <div style="border-radius:8px;border:1px solid rgba(74,122,204,0.2);overflow:hidden;cursor:pointer" onclick="toggleLocation('${loc}')">
+        ${locPhoto ? `<div style="position:relative"><img src="${locPhoto}" style="width:100%;height:100px;object-fit:cover;display:block"><div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(10,15,40,0.85) 0%,transparent 60%)"></div><div style="position:absolute;bottom:0;left:0;right:0;padding:8px 14px;display:flex;align-items:flex-end;justify-content:space-between"><div><div style="font-size:14px;font-weight:bold;color:#fff">${loc}</div><div style="font-size:11px;color:rgba(255,255,255,0.7)">${booksHere.length} livro${booksHere.length!==1?'s':''}${loanedHere>0?' · <span style="color:#f4a0a0">'+loanedHere+' emprestado'+(loanedHere>1?'s':'')+'</span>':''}</div></div><span style="color:rgba(255,255,255,0.7);font-size:16px" id="loc-arrow-${key}">▾</span></div></div>` :
+        `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(74,122,204,0.1)"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">${getLocationIcon(loc)}</span><div><div style="font-size:14px;font-weight:bold;color:var(--gold)">${loc}</div><div style="font-size:11px;color:var(--muted)">${booksHere.length} livro${booksHere.length!==1?'s':''}${loanedHere>0?' · <span style="color:#c47a7a">'+loanedHere+' emprestado'+(loanedHere>1?'s':'')+'</span>':''}</div></div></div><span style="color:var(--muted);font-size:16px" id="loc-arrow-${key}">▾</span></div>`}
       </div>
       <div id="loc-books-${key}" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;padding-left:4px">
         ${booksHere.map(book => {
@@ -924,7 +961,8 @@ function renderHomeByLocal(locations) {
             <div style="flex:1;min-width:0">
               <div style="font-size:13px;font-weight:bold;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${book.title}</div>
               <div style="font-size:11px;color:var(--sub)">${book.author}</div>
-              ${loaned && loan ? `<div style="font-size:11px;color:#c47a7a;margin-top:3px">📤 ${loan.borrower}</div>` : `<div style="font-size:10px;color:var(--muted);margin-top:3px">${book.status}</div>`}
+              ${book.shelfRow||book.shelfPos ? `<div style="font-size:10px;color:var(--muted);margin-top:2px">${[book.shelfRow,book.shelfPos].filter(Boolean).join(' · ')}</div>` : ''}
+              ${loaned && loan ? `<div style="font-size:11px;color:#c47a7a;margin-top:3px">📤 ${loan.borrower}</div>` : `<div style="font-size:10px;color:var(--muted);margin-top:1px">${book.status}</div>`}
             </div>
           </div>`;
         }).join('')}
@@ -997,7 +1035,15 @@ function shelfCard(book) {
   let expHTML = '';
   if (exp) {
     expHTML = `<div class="card-expanded">
-      <div class="card-meta">${book.genre}${book.year?' · '+book.year:''}${book.shelf?' · '+book.shelf:''}</div>
+      <div class="card-meta">${book.genre}${book.year?' · '+book.year:''}</div>
+      ${(book.shelf||book.shelfRow||book.shelfPos) ? `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">
+        ${(()=>{const p=getShelfPhoto(book.shelf);return p?`<img src="${p}" style="width:54px;height:40px;object-fit:cover;border-radius:4px;border:1px solid rgba(74,122,204,0.3);flex-shrink:0">`:'';})()}
+        <div style="font-size:11px;color:var(--sub);line-height:1.7">
+          ${book.shelf?`📚 <strong>${book.shelf}</strong>`:''}
+          ${book.shelfRow?`<br>🗂 ${book.shelfRow}`:''}
+          ${book.shelfPos?`<br>📍 ${book.shelfPos}`:''}
+        </div>
+      </div>` : ''}
       ${loaned && loan ? `<div class="loan-info">📤 <strong>${loan.borrower}</strong><br>desde ${fmtDate(loan.loanDate)}${loan.expectedReturn?'<br>até '+fmtDate(loan.expectedReturn):''}</div>` : ''}
       ${book.notes ? `<div class="card-notes">"${book.notes}"</div>` : ''}
       ${book.review ? `<div style="background:rgba(74,122,204,0.07);border-left:3px solid rgba(74,122,204,0.4);border-radius:0 6px 6px 0;padding:8px 10px;margin-bottom:8px;font-size:10px;color:var(--sub);font-style:italic;line-height:1.6;cursor:pointer" onclick="event.stopPropagation();openReviewModal('${book.id}')">📝 <strong style="font-style:normal;color:var(--gold)">Resenha:</strong> ${book.review.length>120?book.review.substring(0,120)+'…':book.review}</div>` : ''}
@@ -1044,7 +1090,8 @@ function renderList() {
       ${coverHTML(book,42,56)}
       <div class="list-info">
         <div class="list-title">${book.title}</div>
-        <div class="list-sub">${book.author} · ${book.genre}${book.year?' · '+book.year:''}${book.shelf?' · '+book.shelf:''}</div>
+        <div class="list-sub">${book.author} · ${book.genre}${book.year?' · '+book.year:''}</div>
+        ${book.shelf||book.shelfRow||book.shelfPos ? `<div style="font-size:10px;color:var(--muted);margin-top:2px">📚 ${[book.shelf,book.shelfRow,book.shelfPos].filter(Boolean).join(' · ')}</div>` : ''}
         ${loaned&&loan?`<div class="list-loan">📤 <strong>${loan.borrower}</strong> · ${fmtDate(loan.loanDate)}${loan.expectedReturn?' → até '+fmtDate(loan.expectedReturn):''}</div>`:''}
         ${book.rating>0?`<div style="margin-top:3px">${starsHTML(book.rating,true)}</div>`:''}
       </div>
@@ -1232,6 +1279,10 @@ function openBookModal(bookId = null) {
     document.getElementById('f-status').value = b.status;
     document.getElementById('f-year').value = b.year || '';
     document.getElementById('f-shelf').value = b.shelf || '';
+    document.getElementById('f-shelf-row').value = b.shelfRow || '';
+    document.getElementById('f-shelf-pos').value = b.shelfPos || '';
+    currentShelfPhoto = null; // no change by default
+    updateShelfPhotoPreview();
     document.getElementById('f-notes').value = b.notes || '';
     setRating(b.rating || 0);
     currentCover = b.cover;
@@ -1243,6 +1294,10 @@ function openBookModal(bookId = null) {
     document.getElementById('f-status').value = 'Quero Ler';
     document.getElementById('f-year').value = new Date().getFullYear();
     document.getElementById('f-shelf').value = '';
+    document.getElementById('f-shelf-row').value = '';
+    document.getElementById('f-shelf-pos').value = '';
+    currentShelfPhoto = null;
+    updateShelfPhotoPreview();
     document.getElementById('f-notes').value = '';
     setRating(0);
     updateCoverPreview();
@@ -1256,17 +1311,28 @@ async function saveBook() {
   const title = document.getElementById('f-title').value.trim();
   const author = document.getElementById('f-author').value.trim();
   if (!title || !author) { alert('Título e autor são obrigatórios!'); return; }
+  const shelfName = document.getElementById('f-shelf').value.trim();
   const data = {
     title, author,
     genre: document.getElementById('f-genre').value,
     status: document.getElementById('f-status').value,
     year: parseInt(document.getElementById('f-year').value) || null,
-    shelf: document.getElementById('f-shelf').value.trim(),
+    shelf: shelfName,
+    shelfRow: document.getElementById('f-shelf-row').value.trim(),
+    shelfPos: document.getElementById('f-shelf-pos').value.trim(),
     notes: document.getElementById('f-notes').value.trim(),
     rating: currentRating,
     cover: currentCover,
     dateAdded: editingBookId ? bookById(editingBookId).dateAdded : new Date().toISOString().split('T')[0],
   };
+  // Save shelf photo if new one was set
+  if (currentShelfPhoto !== null && shelfName) {
+    if (currentShelfPhoto) {
+      await saveShelfPhoto(shelfName, currentShelfPhoto);
+    } else {
+      await deleteShelfPhoto(shelfName);
+    }
+  }
   if (editingBookId) {
     await updateBook(editingBookId, data);
     showToast('✅ Livro atualizado!');
@@ -1327,6 +1393,59 @@ function compressImage(file, maxWidth, quality) {
 }
 
 function removeCover() { currentCover = null; updateCoverPreview(); }
+
+// ── Shelf Photo ──────────────────────────────
+let currentShelfPhoto = null; // null = no change, '' = remove, 'data:...' = new photo
+
+function triggerShelfPhotoUpload() { document.getElementById('shelf-photo-input').click(); }
+
+async function handleShelfPhotoUpload(input) {
+  const file = input.files[0]; if (!file) return;
+  showToast('⏳ Processando foto da estante...');
+  try {
+    const compressed = await compressImage(file, 1200, 0.80);
+    const reader = new FileReader();
+    reader.onload = e => {
+      currentShelfPhoto = e.target.result;
+      updateShelfPhotoPreview();
+      showToast('✅ Foto da estante pronta!');
+    };
+    reader.readAsDataURL(compressed);
+  } catch(err) {
+    const reader = new FileReader();
+    reader.onload = e => { currentShelfPhoto = e.target.result; updateShelfPhotoPreview(); };
+    reader.readAsDataURL(file);
+  }
+}
+
+function removeShelfPhoto() {
+  currentShelfPhoto = ''; // empty string = signal to delete
+  updateShelfPhotoPreview();
+}
+
+function updateShelfPhotoPreview() {
+  const preview = document.getElementById('shelf-photo-preview');
+  const removeBtn = document.getElementById('btn-remove-shelf-photo');
+  if (!preview) return;
+  // Determine which photo to show: new upload > existing from Firestore
+  const shelfName = document.getElementById('f-shelf')?.value?.trim() || '';
+  let photoSrc = null;
+  if (currentShelfPhoto === null) {
+    // No change — show existing
+    photoSrc = getShelfPhoto(shelfName);
+  } else if (currentShelfPhoto === '') {
+    photoSrc = null; // being removed
+  } else {
+    photoSrc = currentShelfPhoto; // new upload
+  }
+  if (photoSrc) {
+    preview.innerHTML = `<img src="${photoSrc}" style="width:100%;max-height:140px;object-fit:cover;border-radius:8px;border:1px solid rgba(74,122,204,0.3)">`;
+    if (removeBtn) removeBtn.style.display = 'inline-flex';
+  } else {
+    preview.innerHTML = '';
+    if (removeBtn) removeBtn.style.display = 'none';
+  }
+}
 function updateCoverPreview() {
   const inner = document.getElementById('cover-preview-inner');
   const removeBtn = document.getElementById('remove-cover-btn');
