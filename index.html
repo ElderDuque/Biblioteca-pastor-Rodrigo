@@ -483,6 +483,24 @@
   </div>
 </div>
 
+<!-- REVIEW MODAL -->
+<div class="modal-overlay" id="review-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📝 Resenha Pessoal</div>
+    <div id="review-book-info" style="display:flex;gap:12px;align-items:center;background:rgba(74,122,204,0.08);border-radius:8px;padding:12px;margin-bottom:16px"></div>
+    <div class="form-group">
+      <label class="form-label">Suas impressões sobre o livro</label>
+      <textarea class="form-input" id="review-text" placeholder="O que você achou? Pontos marcantes, reflexões, trechos favoritos..." style="min-height:140px"></textarea>
+    </div>
+    <div id="review-date" style="font-size:10px;color:var(--muted);margin-bottom:14px"></div>
+    <div class="form-actions">
+      <button class="btn btn-gold" onclick="closeReviewModal()">Cancelar</button>
+      <button class="btn btn-solid-gold" onclick="saveReview()">Salvar Resenha</button>
+    </div>
+  </div>
+</div>
+
 <!-- LOAN MODAL -->
 <div class="modal-overlay" id="loan-modal">
   <div class="modal">
@@ -982,8 +1000,10 @@ function shelfCard(book) {
       <div class="card-meta">${book.genre}${book.year?' · '+book.year:''}${book.shelf?' · '+book.shelf:''}</div>
       ${loaned && loan ? `<div class="loan-info">📤 <strong>${loan.borrower}</strong><br>desde ${fmtDate(loan.loanDate)}${loan.expectedReturn?'<br>até '+fmtDate(loan.expectedReturn):''}</div>` : ''}
       ${book.notes ? `<div class="card-notes">"${book.notes}"</div>` : ''}
+      ${book.review ? `<div style="background:rgba(74,122,204,0.07);border-left:3px solid rgba(74,122,204,0.4);border-radius:0 6px 6px 0;padding:8px 10px;margin-bottom:8px;font-size:10px;color:var(--sub);font-style:italic;line-height:1.6;cursor:pointer" onclick="event.stopPropagation();openReviewModal('${book.id}')">📝 <strong style="font-style:normal;color:var(--gold)">Resenha:</strong> ${book.review.length>120?book.review.substring(0,120)+'…':book.review}</div>` : ''}
       <div class="card-actions">
         <button class="btn btn-gold" onclick="event.stopPropagation();openBookModal('${book.id}')">✏</button>
+        <button class="btn" style="background:rgba(74,122,204,0.12);color:var(--gold);border:1px solid rgba(74,122,204,0.25);font-size:11px" onclick="event.stopPropagation();openReviewModal('${book.id}')">📝${book.review?' Editar':'Resenha'}</button>
         ${!loaned ? `<button class="btn btn-green" onclick="event.stopPropagation();openLoanModal('${book.id}')">📤 Emprestar</button>` : ''}
         ${loaned && loan ? `<button class="btn btn-blue" onclick="event.stopPropagation();markReturned('${loan.id}')">✅ Devolvido</button>` : ''}
         <button class="btn btn-red" onclick="event.stopPropagation();deleteBook('${book.id}')">🗑</button>
@@ -1030,6 +1050,7 @@ function renderList() {
       </div>
       <div class="list-actions">
         <button class="btn btn-gold" onclick="openBookModal('${book.id}')">✏</button>
+        <button class="btn" style="background:rgba(74,122,204,0.12);color:var(--gold);border:1px solid rgba(74,122,204,0.25);font-size:11px" onclick="openReviewModal('${book.id}')" title="${book.review?'Ver/Editar Resenha':'Adicionar Resenha'}">${book.review?'📝':'📝'}</button>
         ${!loaned?`<button class="btn btn-green" onclick="openLoanModal('${book.id}')">📤</button>`:loan?`<button class="btn btn-blue" onclick="markReturned('${loan.id}')">✅</button>`:''}
         <button class="btn btn-red" onclick="deleteBook('${book.id}')">🗑</button>
       </div>
@@ -1268,14 +1289,43 @@ function setRating(r) {
   document.querySelectorAll('#star-rating .star').forEach((s,i) => s.classList.toggle('filled', i<r));
 }
 
-// Cover upload
+// Cover upload — Base64 com compressão automática
 function triggerCoverUpload() { document.getElementById('cover-input').click(); }
-function handleCoverUpload(input) {
+
+async function handleCoverUpload(input) {
   const file = input.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => { currentCover = e.target.result; updateCoverPreview(); };
-  reader.readAsDataURL(file);
+  showToast('⏳ Processando capa...');
+  try {
+    const compressed = await compressImage(file, 800, 0.82);
+    const reader = new FileReader();
+    reader.onload = e => { currentCover = e.target.result; updateCoverPreview(); showToast('✅ Capa pronta!'); };
+    reader.readAsDataURL(compressed);
+  } catch(err) {
+    // Fallback sem compressão
+    const reader = new FileReader();
+    reader.onload = e => { currentCover = e.target.result; updateCoverPreview(); };
+    reader.readAsDataURL(file);
+  }
 }
+
+// Comprimir imagem antes de salvar (mantém tamanho pequeno no Firestore)
+function compressImage(file, maxWidth, quality) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale = Math.min(1, maxWidth / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(blob => resolve(blob), 'image/jpeg', quality);
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  });
+}
+
 function removeCover() { currentCover = null; updateCoverPreview(); }
 function updateCoverPreview() {
   const inner = document.getElementById('cover-preview-inner');
@@ -1300,10 +1350,16 @@ async function processAIImage(input) {
   const resultDiv = document.getElementById('ai-result');
   resultDiv.innerHTML = `<div class="ai-loading">🔍 Analisando a capa com IA...</div>`;
 
-  // Also set as cover
-  const coverReader = new FileReader();
-  coverReader.onload = e => { currentCover = e.target.result; updateCoverPreview(); };
-  coverReader.readAsDataURL(file);
+  // Also set as cover — com compressão
+  compressImage(file, 800, 0.82).then(compressed => {
+    const reader = new FileReader();
+    reader.onload = e => { currentCover = e.target.result; updateCoverPreview(); };
+    reader.readAsDataURL(compressed);
+  }).catch(() => {
+    const reader = new FileReader();
+    reader.onload = e => { currentCover = e.target.result; updateCoverPreview(); };
+    reader.readAsDataURL(file);
+  });
 
   // Read as base64 for API
   const reader = new FileReader();
@@ -1347,6 +1403,43 @@ async function processAIImage(input) {
   };
   reader.readAsDataURL(file);
   input.value = '';
+}
+
+// ═══════════════════════════════════════════
+// REVIEW MODAL
+// ═══════════════════════════════════════════
+let reviewingBookId = null;
+
+function openReviewModal(bookId) {
+  reviewingBookId = bookId;
+  const book = bookById(bookId);
+  if (!book) return;
+  // Book info header
+  document.getElementById('review-book-info').innerHTML = `
+    ${coverHTML(book, 40, 54)}
+    <div style="flex:1;min-width:0">
+      <div style="font-size:14px;font-weight:bold;color:var(--text)">${book.title}</div>
+      <div style="font-size:12px;color:var(--sub);margin-top:2px">${book.author}</div>
+      ${book.rating>0?`<div style="margin-top:4px">${starsHTML(book.rating,true)}</div>`:''}
+    </div>`;
+  // Load existing review
+  const review = book.review || '';
+  const reviewDate = book.reviewDate || '';
+  document.getElementById('review-text').value = review;
+  document.getElementById('review-date').textContent = reviewDate ? `Última edição: ${fmtDate(reviewDate)}` : '';
+  document.getElementById('review-modal').classList.add('open');
+}
+
+function closeReviewModal() {
+  document.getElementById('review-modal').classList.remove('open');
+}
+
+async function saveReview() {
+  const text = document.getElementById('review-text').value.trim();
+  const today = new Date().toISOString().split('T')[0];
+  await updateBook(reviewingBookId, { review: text, reviewDate: text ? today : null });
+  showToast(text ? '📝 Resenha salva!' : '🗑 Resenha removida');
+  closeReviewModal();
 }
 
 // ═══════════════════════════════════════════
@@ -1482,6 +1575,7 @@ document.getElementById('btn-ios-close').addEventListener('click', () => {
 // Close modals on overlay click
 document.getElementById('book-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeBookModal(); });
 document.getElementById('loan-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeLoanModal(); });
+document.getElementById('review-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeReviewModal(); });
 
 // Service Worker
 if ('serviceWorker' in navigator) {
